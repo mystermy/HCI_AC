@@ -76,7 +76,24 @@ enterBtn.addEventListener('click', () => {
         startStudying();
     }
 });
+// Add event listeners for menu buttons
+document.getElementById('viewBladesBtn').addEventListener('click', () => {
+    document.getElementById('menu').classList.add('hidden');
+    document.getElementById('bladeList').classList.remove('hidden');
+});
 
+document.getElementById('forgeBladeBtn').addEventListener('click', () => {
+    document.getElementById('menu').classList.add('hidden');
+    document.getElementById('setup').classList.remove('hidden');
+});
+
+// Add event listeners for back buttons
+document.querySelectorAll('.backBtn').forEach(button => {
+    button.addEventListener('click', () => {
+        document.querySelectorAll('.view').forEach(view => view.classList.add('hidden'));
+        document.getElementById('menu').classList.remove('hidden');
+    });
+});
 leaveBtn.addEventListener('click', () => {
     if (transitionAction === 'exit') {
         clearInterval(transitionTimer);
