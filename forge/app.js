@@ -112,10 +112,14 @@ function leaveStudy() {
   clearInterval(phaseTimer);
   phaseTimer = null;
   exitFullscreen();
-  showTransition('Leave full-screen within 30s or forging fails!', 'Return to Forge', () => {
-    requestFullscreen(sessionView);
-    startStudy();
-  });
+  if (currentRound >= rounds && studyRemaining <= 0) {
+    endSession(true);
+  } else {
+    showTransition('Leave full-screen within 30s or forging fails!', 'Return to Forge', () => {
+      requestFullscreen(sessionView);
+      startStudy();
+    });
+  }
 }
 
 // REST PHASE LOGIC
@@ -241,10 +245,15 @@ function endSession(success) {
   clearInterval(phaseTimer);
   phaseTimer = null;
   exitFullscreen();
+
+  // Log the values for debugging
+  console.log('outOfFull:', outOfFull);
+  console.log('inFullDuringRest:', inFullDuringRest);
+
   if (!success) outcome = 'Blade Broken';
   statsEl.innerHTML = `
-    <p>Total seconds out of full-screen during Studying Phases: ${outOfFull}</p>
-    <p>Total seconds inside full-screen during Rest Phases: ${inFullDuringRest}</p>
+    <p>Total seconds out of full-screen during Studying Phases: ${transitionDurations.filter((_, index) => index % 1 === 0).join(', ')}</p>
+    <p>Total seconds inside full-screen during Rest Phases: ${transitionDurations.filter((_, index) => index % 2 !== 0).join(', ')}</p>
     <p>Outcome: ${outcome}</p>`;
   if (success) {
     nameEntry.classList.remove('hidden');
