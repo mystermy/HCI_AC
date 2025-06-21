@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sword Forge Pomodoro</title>
+<style>
+    body {
+        margin: 0;
+        background: #1a1a1a;
+        color: #fff;
+        font-family: Arial, sans-serif;
+    }
+    /* Control panel at the bottom */
+    .panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        background: #333;
+    }
+    .panel input {
+        width: 60px;
+    }
+    /* Full-screen sections */
+    .screen {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        justify-content: center;
+        align-items: center;
+        font-size: 3em;
+        text-align: center;
+    }
+    #forgeScreen {
+        background: #300;
+        color: #f66;
+        text-shadow: 0 0 20px #f66;
+    }
+    #quenchScreen {
+        background: #003;
+        color: #6cf;
+        text-shadow: 0 0 20px #6cf;
+    }
+    #timerDisplay {
+        font-size: 2em;
+        color: #f66;
+        text-shadow: 0 0 10px #f66;
+        min-width: 100px;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+
+<div id="controlPanel" class="panel">
+    <label>Heat: <input type="number" id="workMinutes" value="25" min="1"></label>
+    <label>Quench: <input type="number" id="breakMinutes" value="5" min="1"></label>
+    <button id="startBtn">Start</button>
+    <button id="stopBtn">Stop</button>
+    <span id="timerDisplay">00:00</span>
+</div>
+
+<div id="forgeScreen" class="screen">Forge!</div>
+<div id="quenchScreen" class="screen">Quench...</div>
+
+<script>
+// Grab elements we need
+const workInput = document.getElementById('workMinutes');
+const breakInput = document.getElementById('breakMinutes');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const timerDisplay = document.getElementById('timerDisplay');
+const forgeScreen = document.getElementById('forgeScreen');
+const quenchScreen = document.getElementById('quenchScreen');
+const panel = document.getElementById('controlPanel');
+
+let timer = null;
+let targetWork = 0;
+let remaining = 0;
+let breakTime = 0;
+let actualWork = 0;
+
+// Format seconds as MM:SS
+function format(seconds) {
+    const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+// Show the requested screen
+function setScreen(name) {
+    forgeScreen.style.display = name === 'forge' ? 'flex' : 'none';
+    quenchScreen.style.display = name === 'quench' ? 'flex' : 'none';
+    panel.style.display = name === 'panel' ? 'flex' : 'none';
+}
+
+// Begin forging countdown
+function startForge() {
+    if (timer && quenchScreen.style.display === 'flex') {
+        alert('Too soon—blade not cooled!');
+        return;
+    }
+    targetWork = parseInt(workInput.value, 10) * 60;
+    breakTime = parseInt(breakInput.value, 10) * 60;
+    if (!targetWork) return;
+    remaining = targetWork;
+    actualWork = 0;
+    setScreen('forge');
+    timerDisplay.style.color = '#f66';
+    timerDisplay.textContent = format(remaining);
+    timer = setInterval(() => {
+        remaining--;
+        actualWork++;
+        timerDisplay.textContent = format(remaining);
+        if (remaining <= 0) {
+            clearInterval(timer);
+            startQuench();
+        }
+    }, 1000);
+}
+
+// Begin quenching countdown
+function startQuench() {
+    remaining = breakTime;
+    setScreen('quench');
+    timerDisplay.style.color = '#6cf';
+    timerDisplay.textContent = format(remaining);
+    timer = setInterval(() => {
+        remaining--;
+        timerDisplay.textContent = format(remaining);
+        if (remaining <= 0) {
+            clearInterval(timer);
+            finishCycle();
+        }
+    }, 1000);
+}
+
+// After break finishes
+function finishCycle() {
+    setScreen('panel');
+    const diff = ((actualWork - targetWork) / 60).toFixed(1);
+    const sign = diff > 0 ? '+' : '';
+    alert(`Forge complete! Time on target: ${sign}${diff} minutes.`);
+    timerDisplay.textContent = '00:00';
+}
+
+// Stop forging early
+function stopForge() {
+    if (forgeScreen.style.display === 'flex') {
+        clearInterval(timer);
+        setScreen('panel');
+        alert('Blade warping!');
+        timerDisplay.textContent = '00:00';
+    }
+}
+
+startBtn.addEventListener('click', startForge);
+stopBtn.addEventListener('click', stopForge);
+// Escape key also stops forging
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') stopForge();
+});
+</script>
+</body>
+</html>
