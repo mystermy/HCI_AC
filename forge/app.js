@@ -4,6 +4,8 @@ const PHASE_REST = 'rest';
 
 // MENU SETUP
 const menu = document.getElementById('menu');
+const bladeListView = document.getElementById('bladeList');
+const bladesUl = document.getElementById('blades');
 const setupView = document.getElementById('setup');
 const forgeArea = document.getElementById('forgeArea');
 const statsView = document.getElementById('stats');
@@ -13,6 +15,14 @@ const transitionTimerEl = document.getElementById('transitionTimer');
 const enterBtn = document.getElementById('enterBtn');
 const leaveBtn = document.getElementById('leaveBtn');
 const summary = document.getElementById('summary');
+
+const viewBladesBtn = document.getElementById('viewBladesBtn');
+const forgeBladeBtn = document.getElementById('forgeBladeBtn');
+const saveBladeBtn = document.getElementById('saveBladeBtn');
+const bladeNameInput = document.getElementById('bladeName');
+const nameEntry = document.getElementById('nameEntry');
+
+let blades = [];
 
 let totalCycles = 0;
 let studyDuration = 0;
@@ -60,8 +70,25 @@ function startSession() {
 
 document.getElementById('beginBtn').addEventListener('click', startSession);
 
+viewBladesBtn.addEventListener('click', () => {
+    bladesUl.innerHTML = blades.map(b => `<li>${b}</li>`).join('');
+    showView(bladeListView);
+});
+
+forgeBladeBtn.addEventListener('click', () => {
+    showView(setupView);
+});
+
+saveBladeBtn.addEventListener('click', () => {
+    const name = bladeNameInput.value.trim();
+    if (name) blades.push(name);
+    bladeNameInput.value = '';
+    showView(menu);
+});
+
 document.querySelectorAll('.backBtn').forEach(btn => btn.addEventListener('click', () => {
     exitFull();
+    nameEntry.classList.add('hidden');
     showView(menu);
 }));
 
@@ -182,7 +209,13 @@ function finishSession() {
     exitFull();
     showView(statsView);
     const outcome = bladeBroken ? 'Blade Broken' : 'Blade Forged';
-    summary.innerHTML = `<p>Out of full-screen during Studying: ${outOfFullscreen}s</p>` +
+    summary.innerHTML =
+        `<p>Out of full-screen during Studying: ${outOfFullscreen}s</p>` +
         `<p>In full-screen during Rest: ${inFullscreen}s</p>` +
         `<p>Outcome: ${outcome}</p>`;
+    if (!bladeBroken) {
+        nameEntry.classList.remove('hidden');
+    } else {
+        nameEntry.classList.add('hidden');
+    }
 }
