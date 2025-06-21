@@ -15,23 +15,17 @@ body {
     display: none !important;
 }
 
-/* ensure overlay never blocks when hidden */
-#overlay.hidden {
-    display: none !important;
-}
-
 button {
     margin: 5px;
     padding: 10px 20px;
     font-size: 1em;
 }
 
-#transitionTimer {
-    font-size: 1.5em;
-    margin-top: 10px;
+.timer {
+    font-size: 2em;
+    margin: 20px 0;
 }
 
-/* OVERLAY */
 #overlay {
     position: fixed;
     top: 0;
@@ -43,12 +37,11 @@ button {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #fff;
     font-size: 2em;
     z-index: 1000;
 }
 
-/* FORGE GLOW */
+/* forge glow animation */
 .forge-background {
     animation: forgeGlow 3s infinite;
 }
@@ -59,7 +52,7 @@ button {
     100% { background-color: #400; }
 }
 
-/* COOLING MIST */
+/* cooling mist */
 .mist {
     animation: mist 2s infinite;
 }
@@ -70,12 +63,8 @@ button {
     100% { background-color: #224; }
 }
 
-/* CRACK ANIMATION */
+/* crack effect */
 .crack {
-    animation: crack 0.3s steps(3) infinite;
-}
-
-#forgeArea.crack {
     animation: crack 0.3s steps(3) infinite;
 }
 

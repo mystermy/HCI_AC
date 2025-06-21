@@ -8,55 +8,51 @@
 </head>
 <body>
 <div id="menu" class="view">
-    <button id="viewBladesBtn">View Forged Blades</button>
-    <button id="forgeBladeBtn">Forge New Blade</button>
+    <button id="startForge">Forge a Sword</button>
+    <button id="showList">List of Forged Swords</button>
 </div>
 
-<div id="bladeList" class="view hidden">
-    <h1>Forged Blades</h1>
-    <ul id="blades"></ul>
-    <button class="backBtn">Back to Menu</button>
+<div id="formView" class="view hidden">
+    <label>Rounds
+        <input type="number" id="rounds" min="1" value="1">
+    </label>
+    <label>Studying Duration (minutes)
+        <input type="number" id="studyMinutes" min="1" value="25">
+    </label>
+    <label>Rest Duration (minutes)
+        <input type="number" id="restMinutes" min="1" value="5">
+    </label>
+    <button id="beginSession">Begin Session</button>
+    <button class="backMenu">Back to Menu</button>
 </div>
 
-<div id="setup" class="view hidden">
-    <h1>Forge New Blade</h1>
-    <label>Work Duration (minutes)
-        <input type="number" id="workDuration" min="1" value="25">
-    </label>
-    <label>Number of Cycles
-        <input type="number" id="cycles" min="1" value="1">
-    </label>
-    <label>Break Duration (minutes)
-        <input type="number" id="breakDuration" min="1" value="5">
-    </label>
-    <button id="beginBtn">Begin Forging</button>
-    <button class="backBtn">Back to Menu</button>
-</div>
-
-<div id="forgeArea" class="view hidden">
-    <h1 id="phaseTitle"></h1>
-    <div id="timer"></div>
-    <div id="transitionTimer" class="hidden"></div>
-    <button id="leaveBtn" class="hidden">Leave Forge</button>
-    <button id="enterBtn" class="hidden">Enter Forge</button>
+<div id="sessionView" class="view hidden">
+    <h1 id="phaseHeader"></h1>
+    <div id="timer" class="timer"></div>
+    <button id="leaveForge" class="hidden">Leave Forge</button>
 </div>
 
 <div id="overlay" class="hidden">
-    <div id="overlayText"></div>
-    <div id="countdown"></div>
-    <button id="resumeBtn" class="hidden">Return to Forge</button>
+    <div id="overlayHeader"></div>
+    <div id="overlayCountdown"></div>
+    <button id="overlayBtn"></button>
 </div>
 
-<div id="stats" class="view hidden">
-    <h1>Forge Summary</h1>
-    <div id="summary"></div>
+<div id="statsView" class="view hidden">
+    <div id="stats"></div>
     <div id="nameEntry" class="hidden">
-        <label>Name Your Blade
+        <label>Blade Name
             <input type="text" id="bladeName">
         </label>
-        <button id="saveBladeBtn">Save Blade</button>
+        <button id="saveBlade">Save</button>
     </div>
-    <button class="backBtn">Back to Menu</button>
+    <button class="backMenu">Back to Menu</button>
+</div>
+
+<div id="listView" class="view hidden">
+    <h1>Forged Swords</h1>
+    <ul id="bladeList"></ul>
+    <button class="backMenu">Back to Menu</button>
 </div>
 
 <script src="app.js"></script>
