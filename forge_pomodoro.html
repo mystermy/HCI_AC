@@ -94,7 +94,7 @@ document.addEventListener('fullscreenchange',()=>{if(state==='work'&& !document.
 function startFreeze(){state='freeze';overlayRemaining=30;showOverlay('The sword is going cold');forgeGlow.classList.add('hidden');overlayTimer=setInterval(()=>{overlayRemaining--;overlayCount.textContent=overlayRemaining;offWork++;if(overlayRemaining<=0){failSession();}},1000);}
 function stopFreeze(){hideOverlay();forgeGlow.classList.remove('hidden');state='work';}
 
-function endSession(pass){clearInterval(mainTimer);clearInterval(overlayTimer);clearTimeout(graceTimeout);if(document.fullscreenElement)document.exitFullscreen();forgeGlow.classList.add('hidden');coolMist.classList.add('hidden');cracks.classList.add('hidden');state='summary';summaryText.innerHTML=`Outside work: ${offWork}s<br>Outside break: ${offBreak}s<br>`+(pass?'Blade Forged':'Blade Broken');show(summary);}
+function endSession(pass){hideOverlay();clearInterval(mainTimer);clearInterval(overlayTimer);clearTimeout(graceTimeout);if(document.fullscreenElement)document.exitFullscreen();forgeGlow.classList.add('hidden');coolMist.classList.add('hidden');cracks.classList.add('hidden');state='summary';summaryText.innerHTML=`Outside work: ${offWork}s<br>Outside break: ${offBreak}s<br>`+(pass?'Blade Forged':'Blade Broken');show(summary);}
 function failSession(){if(state==='preBreak'||state==='overheat'||state==='postBreak'||state==='warp'){offBreak+=Math.round((Date.now()-phaseStart)/1000);}endSession(false);}
 </script>
 </body>
