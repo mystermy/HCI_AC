@@ -63,6 +63,11 @@ function showView(view) {
   overlay.classList.add('hidden');
   view.classList.remove('hidden');
   document.body.className = '';
+  clearInterval(phaseTimer);
+  phaseTimer = null;
+  clearInterval(transitionTimer);
+  transitionTimer = null;
+  if (view !== sessionView) exitFullscreen();
 }
 
 // SESSION STATE & CONFIG
@@ -79,6 +84,7 @@ let outOfFull = 0;
 let inFullDuringRest = 0;
 let outcome = 'Blade Forged';
 const forgedBlades = [];
+let ignoreFsChange = false;
 
 // STUDY PHASE LOGIC
 function startStudy() {
@@ -86,7 +92,7 @@ function startStudy() {
   leaveForgeBtn.classList.remove('hidden');
   document.body.classList.add('forge-background');
   requestFullscreen(sessionView);
-  studyRemaining = currentRound === 1 ? studyDuration : studyRemaining; // maintain remaining if resumed
+  if (studyRemaining <= 0) studyRemaining = studyDuration;
   timerDisplay.textContent = format(studyRemaining);
   phaseTimer = setInterval(() => {
     studyRemaining--;
@@ -94,6 +100,7 @@ function startStudy() {
     if (!document.fullscreenElement) outOfFull++;
     if (studyRemaining <= 0) {
       clearInterval(phaseTimer);
+      phaseTimer = null;
       overheated();
     }
   }, 1000);
@@ -103,6 +110,7 @@ leaveForgeBtn.addEventListener('click', () => leaveStudy());
 
 function leaveStudy() {
   clearInterval(phaseTimer);
+  phaseTimer = null;
   exitFullscreen();
   showTransition('Leave full-screen within 30s or forging fails!', 'Return to Forge', () => {
     requestFullscreen(sessionView);
@@ -123,6 +131,7 @@ function startRest() {
     if (document.fullscreenElement) inFullDuringRest++;
     if (restRemaining <= 0) {
       clearInterval(phaseTimer);
+      phaseTimer = null;
       if (currentRound < rounds) {
         showTransition('Enter Forge within 30s', 'Enter Forge', () => {
           currentRound++;
@@ -145,6 +154,7 @@ function showTransition(text, btnText, onConfirm) {
   overlay.classList.remove('hidden');
   overlayBtn.onclick = () => {
     clearInterval(transitionTimer);
+    transitionTimer = null;
     overlay.classList.add('hidden');
     transitionDurations.push(elapsed);
     onConfirm();
@@ -154,6 +164,7 @@ function showTransition(text, btnText, onConfirm) {
     overlayCountdown.textContent = 30 - elapsed;
     if (elapsed >= 30) {
       clearInterval(transitionTimer);
+      transitionTimer = null;
       overlay.classList.add('hidden');
       transitionDurations.push(30);
       endSession(false);
@@ -162,8 +173,8 @@ function showTransition(text, btnText, onConfirm) {
 }
 
 function overheated() {
+  exitFullscreen();
   showTransition('The sword is overheated! Temper within 30s', 'Temper the Sword', () => {
-    exitFullscreen();
     if (currentRound >= rounds) {
       endSession(true);
     } else {
@@ -174,6 +185,7 @@ function overheated() {
 
 function startCoolDown() {
   clearInterval(phaseTimer);
+  phaseTimer = null;
   showTransition('Blade damage imminent! Cool within 30s', 'Cool it Down', () => {
     exitFullscreen();
     startRestTimer();
@@ -187,6 +199,7 @@ function startRestTimer() {
     if (document.fullscreenElement) inFullDuringRest++;
     if (restRemaining <= 0) {
       clearInterval(phaseTimer);
+      phaseTimer = null;
       if (currentRound < rounds) {
         showTransition('Enter Forge within 30s', 'Enter Forge', () => {
           currentRound++;
@@ -202,6 +215,7 @@ function startRestTimer() {
 
 // FULLSCREEN HANDLERS
 document.addEventListener('fullscreenchange', () => {
+  if (ignoreFsChange) { ignoreFsChange = false; return; }
   if (sessionView.classList.contains('hidden')) return;
   if (document.fullscreenElement) return;
   if (phaseTimer && leaveForgeBtn.classList.contains('hidden') === false) {
@@ -216,12 +230,16 @@ function requestFullscreen(el) {
 }
 
 function exitFullscreen() {
-  if (document.fullscreenElement) document.exitFullscreen();
+  if (document.fullscreenElement) {
+    ignoreFsChange = true;
+    document.exitFullscreen();
+  }
 }
 
 // STATS & LIST RENDERING
 function endSession(success) {
   clearInterval(phaseTimer);
+  phaseTimer = null;
   exitFullscreen();
   if (!success) outcome = 'Blade Broken';
   statsEl.innerHTML = `
