@@ -1,205 +1,252 @@
-// PHASE DEFINITIONS
-const PHASE_STUDY = 'studying';
-const PHASE_REST = 'rest';
-
 // MENU SETUP
 const menu = document.getElementById('menu');
-const setupView = document.getElementById('setup');
-const forgeArea = document.getElementById('forgeArea');
-const statsView = document.getElementById('stats');
-const phaseTitle = document.getElementById('phaseTitle');
-const timerEl = document.getElementById('timer');
-const transitionTimerEl = document.getElementById('transitionTimer');
-const enterBtn = document.getElementById('enterBtn');
-const leaveBtn = document.getElementById('leaveBtn');
-const summary = document.getElementById('summary');
+const formView = document.getElementById('formView');
+const sessionView = document.getElementById('sessionView');
+const listView = document.getElementById('listView');
+const statsView = document.getElementById('statsView');
+const overlay = document.getElementById('overlay');
 
-let totalCycles = 0;
-let studyDuration = 0;
-let restDuration = 0;
-let currentCycle = 0;
-let currentPhase = null;
-let phaseTimer;
-let transitionTimer;
-let transitionAction = null;
-let outOfFullscreen = 0;
-let inFullscreen = 0;
-let bladeBroken = false;
+const startForgeBtn = document.getElementById('startForge');
+const showListBtn = document.getElementById('showList');
+const beginSessionBtn = document.getElementById('beginSession');
+const backButtons = document.querySelectorAll('.backMenu');
+const saveBladeBtn = document.getElementById('saveBlade');
+
+const phaseHeader = document.getElementById('phaseHeader');
+const timerDisplay = document.getElementById('timer');
+const leaveForgeBtn = document.getElementById('leaveForge');
+
+const overlayHeader = document.getElementById('overlayHeader');
+const overlayCountdown = document.getElementById('overlayCountdown');
+const overlayBtn = document.getElementById('overlayBtn');
+
+const bladeListEl = document.getElementById('bladeList');
+const statsEl = document.getElementById('stats');
+const nameEntry = document.getElementById('nameEntry');
+const bladeNameInput = document.getElementById('bladeName');
+
+// FORM HANDLERS
+startForgeBtn.addEventListener('click', () => showView(formView));
+showListBtn.addEventListener('click', () => {
+  renderBladeList();
+  showView(listView);
+});
+
+beginSessionBtn.addEventListener('click', () => {
+  rounds = parseInt(document.getElementById('rounds').value) || 1;
+  studyDuration = (parseInt(document.getElementById('studyMinutes').value) || 1) * 60;
+  restDuration = (parseInt(document.getElementById('restMinutes').value) || 1) * 60;
+  currentRound = 1;
+  studyRemaining = studyDuration;
+  restRemaining = restDuration;
+  transitionDurations = [];
+  outOfFull = 0;
+  inFullDuringRest = 0;
+  outcome = 'Blade Forged';
+  showView(sessionView);
+  startStudy();
+});
+
+backButtons.forEach(btn => btn.addEventListener('click', () => showView(menu)));
+
+saveBladeBtn.addEventListener('click', () => {
+  const name = bladeNameInput.value.trim();
+  if (name) {
+    forgedBlades.push({ name, transitions: transitionDurations.slice() });
+    bladeNameInput.value = '';
+  }
+  showView(menu);
+});
 
 function showView(view) {
-    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-    view.classList.remove('hidden');
+  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+  overlay.classList.add('hidden');
+  view.classList.remove('hidden');
+  document.body.className = '';
 }
 
-function enterFull() {
-    forgeArea.requestFullscreen().catch(() => {});
+// SESSION STATE & CONFIG
+let rounds = 1;
+let studyDuration = 0;
+let restDuration = 0;
+let currentRound = 1;
+let studyRemaining = 0;
+let restRemaining = 0;
+let transitionDurations = [];
+let transitionTimer = null;
+let phaseTimer = null;
+let outOfFull = 0;
+let inFullDuringRest = 0;
+let outcome = 'Blade Forged';
+const forgedBlades = [];
+
+// STUDY PHASE LOGIC
+function startStudy() {
+  phaseHeader.textContent = `Studying — Round ${currentRound} of ${rounds}`;
+  leaveForgeBtn.classList.remove('hidden');
+  document.body.classList.add('forge-background');
+  requestFullscreen(sessionView);
+  studyRemaining = currentRound === 1 ? studyDuration : studyRemaining; // maintain remaining if resumed
+  timerDisplay.textContent = format(studyRemaining);
+  phaseTimer = setInterval(() => {
+    studyRemaining--;
+    timerDisplay.textContent = format(studyRemaining);
+    if (!document.fullscreenElement) outOfFull++;
+    if (studyRemaining <= 0) {
+      clearInterval(phaseTimer);
+      overheated();
+    }
+  }, 1000);
 }
 
-function exitFull() {
-    if (document.fullscreenElement) document.exitFullscreen();
+leaveForgeBtn.addEventListener('click', () => leaveStudy());
+
+function leaveStudy() {
+  clearInterval(phaseTimer);
+  exitFullscreen();
+  showTransition('Leave full-screen within 30s or forging fails!', 'Return to Forge', () => {
+    requestFullscreen(sessionView);
+    startStudy();
+  });
+}
+
+// REST PHASE LOGIC
+function startRest() {
+  document.body.classList.add('mist');
+  phaseHeader.textContent = `Resting — Round ${currentRound} of ${rounds}`;
+  leaveForgeBtn.classList.add('hidden');
+  restRemaining = restDuration;
+  timerDisplay.textContent = format(restRemaining);
+  phaseTimer = setInterval(() => {
+    restRemaining--;
+    timerDisplay.textContent = format(restRemaining);
+    if (document.fullscreenElement) inFullDuringRest++;
+    if (restRemaining <= 0) {
+      clearInterval(phaseTimer);
+      if (currentRound < rounds) {
+        showTransition('Enter Forge within 30s', 'Enter Forge', () => {
+          currentRound++;
+          studyRemaining = studyDuration;
+          startStudy();
+        });
+      } else {
+        endSession(true);
+      }
+    }
+  }, 1000);
+}
+
+// TRANSITION TIMERS
+function showTransition(text, btnText, onConfirm) {
+  let elapsed = 0;
+  overlayHeader.textContent = text;
+  overlayCountdown.textContent = 30;
+  overlayBtn.textContent = btnText;
+  overlay.classList.remove('hidden');
+  overlayBtn.onclick = () => {
+    clearInterval(transitionTimer);
+    overlay.classList.add('hidden');
+    transitionDurations.push(elapsed);
+    onConfirm();
+  };
+  transitionTimer = setInterval(() => {
+    elapsed++;
+    overlayCountdown.textContent = 30 - elapsed;
+    if (elapsed >= 30) {
+      clearInterval(transitionTimer);
+      overlay.classList.add('hidden');
+      transitionDurations.push(30);
+      endSession(false);
+    }
+  }, 1000);
+}
+
+function overheated() {
+  showTransition('The sword is overheated! Temper within 30s', 'Temper the Sword', () => {
+    exitFullscreen();
+    if (currentRound >= rounds) {
+      endSession(true);
+    } else {
+      startRest();
+    }
+  });
+}
+
+function startCoolDown() {
+  clearInterval(phaseTimer);
+  showTransition('Blade damage imminent! Cool within 30s', 'Cool it Down', () => {
+    exitFullscreen();
+    startRestTimer();
+  });
+}
+
+function startRestTimer() {
+  phaseTimer = setInterval(() => {
+    restRemaining--;
+    timerDisplay.textContent = format(restRemaining);
+    if (document.fullscreenElement) inFullDuringRest++;
+    if (restRemaining <= 0) {
+      clearInterval(phaseTimer);
+      if (currentRound < rounds) {
+        showTransition('Enter Forge within 30s', 'Enter Forge', () => {
+          currentRound++;
+          studyRemaining = studyDuration;
+          startStudy();
+        });
+      } else {
+        endSession(true);
+      }
+    }
+  }, 1000);
+}
+
+// FULLSCREEN HANDLERS
+document.addEventListener('fullscreenchange', () => {
+  if (sessionView.classList.contains('hidden')) return;
+  if (document.fullscreenElement) return;
+  if (phaseTimer && leaveForgeBtn.classList.contains('hidden') === false) {
+    leaveStudy();
+  } else if (phaseHeader.textContent.startsWith('Resting')) {
+    startCoolDown();
+  }
+});
+
+function requestFullscreen(el) {
+  if (el.requestFullscreen) el.requestFullscreen();
+}
+
+function exitFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen();
+}
+
+// STATS & LIST RENDERING
+function endSession(success) {
+  clearInterval(phaseTimer);
+  exitFullscreen();
+  if (!success) outcome = 'Blade Broken';
+  statsEl.innerHTML = `
+    <p>Total seconds out of full-screen during Studying Phases: ${outOfFull}</p>
+    <p>Total seconds inside full-screen during Rest Phases: ${inFullDuringRest}</p>
+    <p>Outcome: ${outcome}</p>`;
+  if (success) {
+    nameEntry.classList.remove('hidden');
+  } else {
+    nameEntry.classList.add('hidden');
+  }
+  showView(statsView);
+}
+
+function renderBladeList() {
+  bladeListEl.innerHTML = '';
+  forgedBlades.forEach(blade => {
+    const li = document.createElement('li');
+    li.textContent = `${blade.name} - [${blade.transitions.join(', ')}]`;
+    bladeListEl.appendChild(li);
+  });
 }
 
 function format(s) {
-    const m = Math.floor(s / 60).toString().padStart(2, '0');
-    const sec = (s % 60).toString().padStart(2, '0');
-    return `${m}:${sec}`;
-}
-
-// SESSION LOGIC
-function startSession() {
-    studyDuration = parseInt(document.getElementById('workDuration').value) * 60;
-    restDuration = parseInt(document.getElementById('breakDuration').value) * 60;
-    totalCycles = parseInt(document.getElementById('cycles').value);
-    currentCycle = 0;
-    outOfFullscreen = 0;
-    inFullscreen = 0;
-    bladeBroken = false;
-    showView(forgeArea);
-    startStudying();
-}
-
-document.getElementById('beginBtn').addEventListener('click', startSession);
-
-document.querySelectorAll('.backBtn').forEach(btn => btn.addEventListener('click', () => {
-    exitFull();
-    showView(menu);
-}));
-
-// BUTTON HANDLERS
-enterBtn.addEventListener('click', () => {
-    if (transitionAction === 'enter') {
-        clearInterval(transitionTimer);
-        transitionTimerEl.classList.add('hidden');
-        enterBtn.classList.add('hidden');
-        transitionAction = null;
-        enterFull();
-        startStudying();
-    }
-});
-// Add event listeners for menu buttons
-document.getElementById('viewBladesBtn').addEventListener('click', () => {
-    document.getElementById('menu').classList.add('hidden');
-    document.getElementById('bladeList').classList.remove('hidden');
-});
-
-document.getElementById('forgeBladeBtn').addEventListener('click', () => {
-    document.getElementById('menu').classList.add('hidden');
-    document.getElementById('setup').classList.remove('hidden');
-});
-
-// Add event listeners for back buttons
-document.querySelectorAll('.backBtn').forEach(button => {
-    button.addEventListener('click', () => {
-        document.querySelectorAll('.view').forEach(view => view.classList.add('hidden'));
-        document.getElementById('menu').classList.remove('hidden');
-    });
-});
-leaveBtn.addEventListener('click', () => {
-    if (transitionAction === 'exit') {
-        clearInterval(transitionTimer);
-        transitionTimerEl.classList.add('hidden');
-        leaveBtn.classList.add('hidden');
-        transitionAction = null;
-        exitFull();
-        startRest();
-    }
-});
-
-function startStudying() {
-    currentCycle++;
-    currentPhase = PHASE_STUDY;
-    phaseTitle.textContent = `Studying (${currentCycle}/${totalCycles})`;
-    if (!document.fullscreenElement) enterFull();
-    let remaining = studyDuration;
-    timerEl.textContent = format(remaining);
-    transitionTimerEl.classList.add('hidden');
-    enterBtn.classList.add('hidden');
-    leaveBtn.classList.add('hidden');
-    phaseTimer = setInterval(() => {
-        remaining--;
-        timerEl.textContent = format(remaining);
-        if (!document.fullscreenElement) outOfFullscreen++;
-        if (remaining <= 0) {
-            clearInterval(phaseTimer);
-            if (currentCycle === totalCycles) {
-                finishSession();
-            } else {
-                startTransition('exit');
-            }
-        }
-    }, 1000);
-}
-
-function startRest() {
-    currentPhase = PHASE_REST;
-    phaseTitle.textContent = 'Rest';
-    if (document.fullscreenElement) exitFull();
-    let remaining = restDuration;
-    timerEl.textContent = format(remaining);
-    transitionTimerEl.classList.add('hidden');
-    enterBtn.classList.add('hidden');
-    leaveBtn.classList.add('hidden');
-    phaseTimer = setInterval(() => {
-        remaining--;
-        timerEl.textContent = format(remaining);
-        if (document.fullscreenElement) inFullscreen++;
-        if (remaining <= 0) {
-            clearInterval(phaseTimer);
-            startTransition('enter');
-        }
-    }, 1000);
-}
-
-// TRANSITION TIMER
-function startTransition(action) {
-    transitionAction = action; // 'enter' or 'exit'
-    let remaining = 30;
-    transitionTimerEl.textContent = remaining;
-    transitionTimerEl.classList.remove('hidden');
-    if (action === 'enter') {
-        enterBtn.classList.remove('hidden');
-        leaveBtn.classList.add('hidden');
-        phaseTitle.textContent = 'Prepare to Study';
-    } else {
-        leaveBtn.classList.remove('hidden');
-        enterBtn.classList.add('hidden');
-        phaseTitle.textContent = 'Prepare to Rest';
-    }
-    timerEl.textContent = '';
-    transitionTimer = setInterval(() => {
-        remaining--;
-        transitionTimerEl.textContent = remaining;
-        if (remaining <= 0) {
-            clearInterval(transitionTimer);
-            bladeBroken = true;
-            finishSession();
-        }
-    }, 1000);
-}
-
-// FULLSCREEN ENFORCEMENT
-document.addEventListener('fullscreenchange', () => {
-    if (transitionAction) return;
-    if (currentPhase === PHASE_STUDY && !document.fullscreenElement) {
-        clearInterval(phaseTimer);
-        startTransition('exit');
-    } else if (currentPhase === PHASE_REST && document.fullscreenElement) {
-        clearInterval(phaseTimer);
-        startTransition('enter');
-    }
-});
-
-// STATS DISPLAY
-function finishSession() {
-    clearInterval(phaseTimer);
-    clearInterval(transitionTimer);
-    enterBtn.classList.add('hidden');
-    leaveBtn.classList.add('hidden');
-    transitionTimerEl.classList.add('hidden');
-    exitFull();
-    showView(statsView);
-    const outcome = bladeBroken ? 'Blade Broken' : 'Blade Forged';
-    summary.innerHTML = `<p>Out of full-screen during Studying: ${outOfFullscreen}s</p>` +
-        `<p>In full-screen during Rest: ${inFullscreen}s</p>` +
-        `<p>Outcome: ${outcome}</p>`;
+  const m = String(Math.floor(s / 60)).padStart(2, '0');
+  const sec = String(s % 60).padStart(2, '0');
+  return `${m}:${sec}`;
 }
