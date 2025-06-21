@@ -6,16 +6,31 @@
 <title>Sword Forge Pomodoro</title>
 <style>
     body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #111;
-        color: #fff;
-        text-align: center;
+        margin:0;
+        font-family:Arial, sans-serif;
+        background:#111;
+        color:#fff;
+        text-align:center;
+        overflow:hidden;
     }
-    .hidden { display: none; }
-    label { margin: 0 5px; }
-    #timer { font-size: 3em; margin-top: 20px; }
-    #reenterBtn { margin-top: 20px; }
+    .hidden{display:none;}
+    #timer{font-size:3em;margin-top:20px;position:relative;z-index:2;}
+    label{margin:0 5px;}
+    button{padding:6px 12px;margin-top:10px;}
+    #overlay{
+        position:fixed;top:0;left:0;width:100%;height:100%;
+        background:rgba(0,0,0,0.8);
+        display:flex;flex-direction:column;justify-content:center;align-items:center;
+        font-size:2em;z-index:5;
+    }
+    #forgeGlow,#coolMist,#cracks{
+        position:absolute;top:50%;left:50%;width:200px;height:200px;margin-left:-100px;margin-top:-100px;pointer-events:none;z-index:1;
+    }
+    @keyframes glow{from{filter:brightness(0.8);}to{filter:brightness(1.5);}}
+    #forgeGlow{background:radial-gradient(circle,rgba(255,140,0,0.8),rgba(0,0,0,0));animation:glow 1s infinite alternate;}
+    @keyframes mist{from{opacity:0.2;transform:translateY(20px);}to{opacity:0.8;transform:translateY(-20px);}}
+    #coolMist{background:radial-gradient(circle,rgba(150,200,255,0.6),rgba(0,0,0,0));animation:mist 2s infinite alternate;}
+    #cracks svg{width:200px;height:200px;stroke:#f00;stroke-width:2;fill:none;animation:glow 0.5s infinite alternate;}
 </style>
 </head>
 <body>
@@ -27,219 +42,87 @@
     <button id="startBtn">Begin Forging</button>
 </div>
 <div id="session" class="hidden">
-    <h1 id="phaseHeader">Forge in Progress</h1>
+    <h1 id="phaseHeader">Forge</h1>
     <div id="timer">00:00</div>
+    <div id="forgeGlow" class="hidden"></div>
+    <div id="coolMist" class="hidden"></div>
+    <div id="cracks" class="hidden">
+        <svg viewBox="0 0 100 100">
+            <polyline points="10,10 50,40 20,70 80,90" />
+            <polyline points="70,10 40,60 90,70" />
+        </svg>
+    </div>
+    <button id="quenchBtn" class="hidden">Begin Quench</button>
     <button id="reenterBtn" class="hidden">Re-enter Forge</button>
+</div>
+<div id="overlay" class="hidden">
+    <div id="overlayText"></div>
+    <div id="overlayCountdown"></div>
 </div>
 <div id="summary" class="hidden">
     <h2>Session Summary</h2>
     <p id="summaryText"></p>
-    <div id="nameBlock" class="hidden">
-        <input type="text" id="bladeName" placeholder="Blade Name">
-        <button id="saveBladeBtn">Save Blade</button>
-    </div>
-    <h3>Forged Blades</h3>
-    <ul id="bladeList"></ul>
-    <button id="restartBtn">New Forge</button>
+    <button id="backBtn">Back to Menu</button>
 </div>
 <script>
-const setup = document.getElementById('setup');
-const session = document.getElementById('session');
-const summary = document.getElementById('summary');
-const phaseHeader = document.getElementById('phaseHeader');
-const timerDisplay = document.getElementById('timer');
-const reenterBtn = document.getElementById('reenterBtn');
-const workInput = document.getElementById('workInput');
-const cycleInput = document.getElementById('cycleInput');
-const breakInput = document.getElementById('breakInput');
-const startBtn = document.getElementById('startBtn');
-const summaryText = document.getElementById('summaryText');
-const nameBlock = document.getElementById('nameBlock');
-const bladeName = document.getElementById('bladeName');
-const saveBladeBtn = document.getElementById('saveBladeBtn');
-const bladeList = document.getElementById('bladeList');
-const restartBtn = document.getElementById('restartBtn');
+const setup=document.getElementById('setup');
+const session=document.getElementById('session');
+const summary=document.getElementById('summary');
+const phaseHeader=document.getElementById('phaseHeader');
+const timerDisplay=document.getElementById('timer');
+const quenchBtn=document.getElementById('quenchBtn');
+const reenterBtn=document.getElementById('reenterBtn');
+const overlay=document.getElementById('overlay');
+const overlayText=document.getElementById('overlayText');
+const overlayCount=document.getElementById('overlayCountdown');
+const forgeGlow=document.getElementById('forgeGlow');
+const coolMist=document.getElementById('coolMist');
+const cracks=document.getElementById('cracks');
+const workInput=document.getElementById('workInput');
+const cycleInput=document.getElementById('cycleInput');
+const breakInput=document.getElementById('breakInput');
+const startBtn=document.getElementById('startBtn');
+const summaryText=document.getElementById('summaryText');
+const backBtn=document.getElementById('backBtn');
 
-let blades = [];
-let workSeconds = 0;
-let breakSeconds = 0;
-let cycles = 0;
-let currentCycle = 1;
-let state = 'setup';
-let remaining = 0;
-let timer = null;
-let warpElapsed = 0;
-let offWork = 0;
-let offBreak = 0;
-let breakStart = 0;
+let workSec=0,breakSec=0,cycles=0,currentCycle=1;
+let state='setup';
+let mainTimer=null,overlayTimer=null,graceTimeout=null;
+let remaining=0,overlayRemaining=0;
+let offWork=0,offBreak=0;
+let phaseStart=0;
 
-function format(sec){
-    const m = String(Math.floor(sec/60)).padStart(2,'0');
-    const s = String(sec%60).padStart(2,'0');
-    return `${m}:${s}`;
-}
+function format(s){const m=String(Math.floor(s/60)).padStart(2,'0');const sec=String(s%60).padStart(2,'0');return `${m}:${sec}`;}
+function show(el){setup.classList.add('hidden');session.classList.add('hidden');summary.classList.add('hidden');el.classList.remove('hidden');}
+function showOverlay(msg){overlayText.textContent=msg;overlay.classList.remove('hidden');overlayCount.textContent=overlayRemaining;cracks.classList.remove('hidden');}
+function hideOverlay(){overlay.classList.add('hidden');clearInterval(overlayTimer);overlayTimer=null;cracks.classList.add('hidden');}
 
-function show(el){
-    setup.classList.add('hidden');
-    session.classList.add('hidden');
-    summary.classList.add('hidden');
-    el.classList.remove('hidden');
-}
+startBtn.onclick=()=>{workSec=parseInt(workInput.value,10)*60;breakSec=parseInt(breakInput.value,10)*60;cycles=parseInt(cycleInput.value,10);if(!workSec||!breakSec||!cycles)return;offWork=0;offBreak=0;currentCycle=1;startWork();};
+backBtn.onclick=()=>{show(setup);};
 
-startBtn.onclick = () => {
-    workSeconds = parseInt(workInput.value,10)*60;
-    breakSeconds = parseInt(breakInput.value,10)*60;
-    cycles = parseInt(cycleInput.value,10);
-    if(!workSeconds || !breakSeconds || !cycles) return;
-    offWork = 0;
-    offBreak = 0;
-    currentCycle = 1;
-    startWork();
-};
+function startWork(){state='work';remaining=workSec;phaseHeader.textContent=`Forge Cycle ${currentCycle}`;quenchBtn.classList.add('hidden');reenterBtn.classList.add('hidden');forgeGlow.classList.remove('hidden');coolMist.classList.add('hidden');show(session);if(!document.fullscreenElement)document.documentElement.requestFullscreen();timerDisplay.textContent=format(remaining);mainTimer=setInterval(()=>{remaining--;timerDisplay.textContent=format(remaining);if(remaining<=0){clearInterval(mainTimer);if(currentCycle>=cycles){endSession(true);}else{startPreBreak();}}},1000);} 
 
-saveBladeBtn.onclick = () => {
-    const name = bladeName.value.trim() || `Blade ${blades.length+1}`;
-    blades.push(name);
-    bladeName.value = '';
-    updateBladeList();
-    show(setup);
-};
+function startPreBreak(){state='preBreak';phaseHeader.textContent='Forge Complete';quenchBtn.classList.remove('hidden');phaseStart=Date.now();graceTimeout=setTimeout(()=>{startOverheat();},30000);}
 
-restartBtn.onclick = () => {
-    show(setup);
-};
+function startOverheat(){state='overheat';overlayRemaining=30;showOverlay('Sword is overheating');overlayTimer=setInterval(()=>{overlayRemaining--;overlayCount.textContent=overlayRemaining;if(overlayRemaining<=0){failSession();}},1000);}
 
-reenterBtn.onclick = () => {
-    if(!document.fullscreenElement) document.documentElement.requestFullscreen();
-};
+quenchBtn.onclick=()=>{if(state==='preBreak'||state==='overheat'){offBreak+=Math.round((Date.now()-phaseStart)/1000);clearTimeout(graceTimeout);hideOverlay();quenchBtn.classList.add('hidden');if(document.fullscreenElement)document.exitFullscreen();startBreak();}}
 
-function updateBladeList(){
-    bladeList.innerHTML = blades.map(b=>`<li>${b}</li>`).join('') || '<li>No blades yet.</li>';
-}
+function startBreak(){state='break';remaining=breakSec;phaseHeader.textContent='Quench';coolMist.classList.remove('hidden');forgeGlow.classList.add('hidden');timerDisplay.textContent=format(remaining);mainTimer=setInterval(()=>{remaining--;timerDisplay.textContent=format(remaining);if(remaining<=0){clearInterval(mainTimer);startPostBreak();}},1000);}
 
-function updateHeader(){
-    if(state==='work') phaseHeader.textContent='Forge in Progress';
-    else if(state==='workWarp') phaseHeader.textContent='The sword is going cold';
-    else if(state==='break' || state==='awaitReenter') phaseHeader.textContent='Sword is overheating';
-    else if(state==='breakWarp') phaseHeader.textContent='Blade damage imminent';
-}
+function startPostBreak(){state='postBreak';phaseHeader.textContent='Break Complete';coolMist.classList.add('hidden');reenterBtn.classList.remove('hidden');phaseStart=Date.now();graceTimeout=setTimeout(()=>{startWarp();},30000);}
 
-function startWork(){
-    state='work';
-    remaining = workSeconds;
-    updateHeader();
-    reenterBtn.classList.add('hidden');
-    show(session);
-    if(!document.fullscreenElement) document.documentElement.requestFullscreen();
-    timerDisplay.textContent = format(remaining);
-    timer = setInterval(workTick,1000);
-}
+function startWarp(){state='warp';overlayRemaining=30;showOverlay('Blade damage imminent');overlayTimer=setInterval(()=>{overlayRemaining--;overlayCount.textContent=overlayRemaining;if(overlayRemaining<=0){failSession();}},1000);}
 
-function workTick(){
-    remaining--;
-    timerDisplay.textContent = format(remaining);
-    if(state==='workWarp'){
-        warpElapsed++;
-        if(warpElapsed >= remaining){
-            failSession();
-        }
-    }
-    if(remaining<=0){
-        clearInterval(timer);
-        if(currentCycle >= cycles){
-            endSession(true);
-        }else{
-            startBreak();
-        }
-    }
-}
+reenterBtn.onclick=()=>{if(state==='postBreak'||state==='warp'){offBreak+=Math.round((Date.now()-phaseStart)/1000);clearTimeout(graceTimeout);hideOverlay();reenterBtn.classList.add('hidden');currentCycle++;forgeGlow.classList.remove('hidden');if(!document.fullscreenElement)document.documentElement.requestFullscreen();startWork();}}
 
-function startBreak(){
-    state='break';
-    remaining = breakSeconds;
-    updateHeader();
-    timerDisplay.textContent = format(remaining);
-    if(document.fullscreenElement) document.exitFullscreen();
-    breakStart = Date.now();
-    timer = setInterval(breakTick,1000);
-}
+document.addEventListener('fullscreenchange',()=>{if(state==='work'&& !document.fullscreenElement){startFreeze();}else if(state==='freeze'&&document.fullscreenElement){stopFreeze();}});
 
-function breakTick(){
-    remaining--;
-    timerDisplay.textContent = format(remaining);
-    if(state==='breakWarp'){
-        warpElapsed++;
-        if(warpElapsed >= remaining){
-            failSession();
-        }
-    }
-    if(remaining<=0){
-        clearInterval(timer);
-        if(state==='breakWarp'){
-            failSession();
-        } else {
-            state='awaitReenter';
-            updateHeader();
-            reenterBtn.classList.remove('hidden');
-        }
-    }
-}
+function startFreeze(){state='freeze';overlayRemaining=30;showOverlay('The sword is going cold');forgeGlow.classList.add('hidden');overlayTimer=setInterval(()=>{overlayRemaining--;overlayCount.textContent=overlayRemaining;offWork++;if(overlayRemaining<=0){failSession();}},1000);}
+function stopFreeze(){hideOverlay();forgeGlow.classList.remove('hidden');state='work';}
 
-document.addEventListener('fullscreenchange', () => {
-    if(state==='work'){
-        if(!document.fullscreenElement){
-            state='workWarp';
-            warpElapsed=0;
-            updateHeader();
-            reenterBtn.classList.remove('hidden');
-        }
-    } else if(state==='workWarp'){
-        if(document.fullscreenElement){
-            offWork += warpElapsed;
-            state='work';
-            updateHeader();
-            reenterBtn.classList.add('hidden');
-        }
-    } else if(state==='break'){
-        if(document.fullscreenElement){
-            state='breakWarp';
-            warpElapsed=0;
-            updateHeader();
-        }
-    } else if(state==='breakWarp'){
-        if(!document.fullscreenElement){
-            offBreak += warpElapsed;
-            state='break';
-            updateHeader();
-        }
-    } else if(state==='awaitReenter'){
-        if(document.fullscreenElement){
-            reenterBtn.classList.add('hidden');
-            currentCycle++;
-            startWork();
-        }
-    }
-});
-
-function endSession(pass){
-    clearInterval(timer);
-    if(document.fullscreenElement) document.exitFullscreen();
-    state='summary';
-    summaryText.innerHTML = `Outside work: ${offWork}s<br>Outside break: ${offBreak}s<br>` + (pass ? 'Blade Forged' : 'Blade Broken');
-    if(pass){
-        nameBlock.classList.remove('hidden');
-    } else {
-        nameBlock.classList.add('hidden');
-    }
-    updateBladeList();
-    show(summary);
-}
-
-function failSession(){
-    if(state==='workWarp') offWork += warpElapsed;
-    if(state==='breakWarp') offBreak += warpElapsed;
-    endSession(false);
-}
+function endSession(pass){clearInterval(mainTimer);clearInterval(overlayTimer);clearTimeout(graceTimeout);if(document.fullscreenElement)document.exitFullscreen();forgeGlow.classList.add('hidden');coolMist.classList.add('hidden');cracks.classList.add('hidden');state='summary';summaryText.innerHTML=`Outside work: ${offWork}s<br>Outside break: ${offBreak}s<br>`+(pass?'Blade Forged':'Blade Broken');show(summary);}
+function failSession(){endSession(false);}
 </script>
 </body>
 </html>
