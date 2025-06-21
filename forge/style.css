@@ -12,7 +12,12 @@ body {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
+}
+
+/* ensure overlay never blocks when hidden */
+#overlay.hidden {
+    display: none !important;
 }
 
 button {
