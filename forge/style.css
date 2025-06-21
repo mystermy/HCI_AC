@@ -26,6 +26,11 @@ button {
     font-size: 1em;
 }
 
+#transitionTimer {
+    font-size: 1.5em;
+    margin-top: 10px;
+}
+
 /* OVERLAY */
 #overlay {
     position: fixed;
