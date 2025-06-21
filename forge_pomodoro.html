@@ -67,7 +67,7 @@ let phaseStart=0;
 
 function format(s){const m=String(Math.floor(s/60)).padStart(2,'0');const sec=String(s%60).padStart(2,'0');return `${m}:${sec}`;}
 function show(el){setup.classList.add('hidden');session.classList.add('hidden');summary.classList.add('hidden');el.classList.remove('hidden');}
-function showOverlay(msg){overlayText.textContent=msg;overlay.classList.remove('hidden');overlayCount.textContent=overlayRemaining;cracks.classList.remove('hidden');}
+function showOverlay(msg,crack=true){overlayText.textContent=msg;overlay.classList.remove("hidden");overlayCount.textContent=overlayRemaining;if(crack)cracks.classList.remove("hidden");else cracks.classList.add("hidden");}
 function hideOverlay(){overlay.classList.add('hidden');clearInterval(overlayTimer);overlayTimer=null;cracks.classList.add('hidden');}
 
 startBtn.onclick=()=>{workSec=parseInt(workInput.value,10)*60;breakSec=parseInt(breakInput.value,10)*60;cycles=parseInt(cycleInput.value,10);if(!workSec||!breakSec||!cycles)return;offWork=0;offBreak=0;currentCycle=1;startWork();};
@@ -83,11 +83,11 @@ quenchBtn.onclick=()=>{if(state==='preBreak'||state==='overheat'){offBreak+=Math
 
 function startBreak(){state='break';remaining=breakSec;phaseHeader.textContent='Quench';coolMist.classList.remove('hidden');forgeGlow.classList.add('hidden');timerDisplay.textContent=format(remaining);mainTimer=setInterval(()=>{remaining--;timerDisplay.textContent=format(remaining);if(remaining<=0){clearInterval(mainTimer);startPostBreak();}},1000);}
 
-function startPostBreak(){state='postBreak';phaseHeader.textContent='Break Complete';coolMist.classList.add('hidden');reenterBtn.classList.remove('hidden');phaseStart=Date.now();graceTimeout=setTimeout(()=>{startWarp();},30000);}
+function startPostBreak(){state="postBreak";phaseHeader.textContent="Break Complete";coolMist.classList.add("hidden");reenterBtn.classList.remove("hidden");overlayRemaining=30;showOverlay("Re-enter Forge",false);clearInterval(overlayTimer);overlayTimer=setInterval(()=>{overlayRemaining--;overlayCount.textContent=overlayRemaining;if(overlayRemaining<=0){startWarp();}},1000);phaseStart=Date.now();}
 
-function startWarp(){state='warp';overlayRemaining=30;showOverlay('Blade damage imminent');overlayTimer=setInterval(()=>{overlayRemaining--;overlayCount.textContent=overlayRemaining;if(overlayRemaining<=0){failSession();}},1000);}
+function startWarp(){hideOverlay();state='warp';overlayRemaining=30;showOverlay('Blade damage imminent');overlayTimer=setInterval(()=>{overlayRemaining--;overlayCount.textContent=overlayRemaining;if(overlayRemaining<=0){failSession();}},1000);}
 
-reenterBtn.onclick=()=>{if(state==='postBreak'||state==='warp'){offBreak+=Math.round((Date.now()-phaseStart)/1000);clearTimeout(graceTimeout);hideOverlay();reenterBtn.classList.add('hidden');currentCycle++;forgeGlow.classList.remove('hidden');if(!document.fullscreenElement)document.documentElement.requestFullscreen();startWork();}}
+reenterBtn.onclick=()=>{if(state==='postBreak'||state==='warp'){offBreak+=Math.round((Date.now()-phaseStart)/1000);hideOverlay();reenterBtn.classList.add('hidden');currentCycle++;forgeGlow.classList.remove('hidden');if(!document.fullscreenElement)document.documentElement.requestFullscreen();startWork();}}
 
 document.addEventListener('fullscreenchange',()=>{if(state==='work'&& !document.fullscreenElement){startFreeze();}else if(state==='freeze'&&document.fullscreenElement){stopFreeze();}});
 
@@ -95,7 +95,7 @@ function startFreeze(){state='freeze';overlayRemaining=30;showOverlay('The sword
 function stopFreeze(){hideOverlay();forgeGlow.classList.remove('hidden');state='work';}
 
 function endSession(pass){clearInterval(mainTimer);clearInterval(overlayTimer);clearTimeout(graceTimeout);if(document.fullscreenElement)document.exitFullscreen();forgeGlow.classList.add('hidden');coolMist.classList.add('hidden');cracks.classList.add('hidden');state='summary';summaryText.innerHTML=`Outside work: ${offWork}s<br>Outside break: ${offBreak}s<br>`+(pass?'Blade Forged':'Blade Broken');show(summary);}
-function failSession(){endSession(false);}
+function failSession(){if(state==='preBreak'||state==='overheat'||state==='postBreak'||state==='warp'){offBreak+=Math.round((Date.now()-phaseStart)/1000);}endSession(false);}
 </script>
 </body>
 </html>

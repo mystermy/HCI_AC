@@ -71,6 +71,10 @@ button {
     pointer-events: none;
 }
 
+#overlayCountdown {
+    font-size: 1.5em;
+    margin-top: 10px;
+}
 #forgeGlow,
 #coolMist,
 #cracks {
