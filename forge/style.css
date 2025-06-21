@@ -70,6 +70,10 @@ button {
     animation: crack 0.3s steps(3) infinite;
 }
 
+#forgeArea.crack {
+    animation: crack 0.3s steps(3) infinite;
+}
+
 @keyframes crack {
     from { opacity: 1; }
     to { opacity: 0; }

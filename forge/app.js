@@ -17,6 +17,9 @@ const summary = document.getElementById('summary');
 const nameEntry = document.getElementById('nameEntry');
 const bladeNameInput = document.getElementById('bladeName');
 
+let overlayMode = null; // type of overlay currently shown
+let breakTimeLeft = 0;
+
 let blades = [];
 let currentCycle = 0;
 let totalCycles = 0;
@@ -61,17 +64,34 @@ document.getElementById('beginBtn').addEventListener('click', () => {
     outOfForgeSeconds = 0;
     outOfBreakSeconds = 0;
     bladeBroken = false;
+    forgeArea.classList.remove('crack');
     startWorkCycle();
 });
 
 // FULLSCREEN HANDLERS
 document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement && forgeArea.classList.contains('forge-background')) {
+    // FULLSCREEN PREVENTION DURING OVERLAYS
+    if (overlayMode === 'end' && !document.fullscreenElement) {
+        showTemperOverlay();
+        return;
+    }
+    if (!document.fullscreenElement && forgeArea.classList.contains('forge-background') && overlayMode === null) {
         startFreeze();
-    } else if (document.fullscreenElement && freezeTimer) {
+    } else if (document.fullscreenElement && freezeTimer && overlayMode === 'freeze') {
         clearInterval(freezeTimer);
         overlay.classList.add('hidden');
         resumeBtn.classList.add('hidden');
+        overlayMode = null;
+    }
+    if (document.fullscreenElement && breakTimer && overlayMode === null) {
+        startBreakOverheat();
+    }
+});
+
+document.addEventListener('keydown', e => {
+    if (overlayMode === 'end' && (e.key === 'Escape' || e.key === 'F11')) {
+        e.preventDefault();
+        showTemperOverlay();
     }
 });
 
@@ -99,21 +119,24 @@ function startWorkCycle() {
         timerEl.textContent = format(timeLeft);
         if (timeLeft <= 0) {
             clearInterval(workTimer);
-            startBreakPhase();
+            showTemperOverlay();
         }
     }, 1000);
 }
 
-function startBreakPhase() {
-    phaseTitle.textContent = 'Quench Time';
-    quenchBtn.classList.remove('hidden');
-    quenchBtn.disabled = false;
+// END-OF-STUDY OVERLAY
+function showTemperOverlay() {
+    overlayMode = 'end';
+    overlayText.textContent = 'The sword is overheated';
+    resumeBtn.textContent = 'Temper the Sword';
+    overlay.classList.remove('hidden');
+    resumeBtn.classList.remove('hidden');
     let wait = 30;
-    overlay.classList.add('hidden');
-    forgeArea.classList.add('mist');
-    // WARP TIMER HANDLERS - overheat before quench
+    countdown.textContent = wait;
+    clearInterval(overheatTimer);
     overheatTimer = setInterval(() => {
         wait--;
+        countdown.textContent = wait;
         if (wait <= 0) {
             clearInterval(overheatTimer);
             bladeBroken = true;
@@ -122,60 +145,94 @@ function startBreakPhase() {
     }, 1000);
 }
 
-quenchBtn.addEventListener('click', () => {
-    clearInterval(overheatTimer);
-    quenchBtn.classList.add('hidden');
-    forgeArea.classList.remove('mist');
-    exitFull();
-    startBreakTimer();
-});
 
 function startBreakTimer() {
-    let timeLeft = breakDuration;
-    timerEl.textContent = format(timeLeft);
+    forgeArea.classList.add('mist');
+    breakTimeLeft = breakDuration;
+    timerEl.textContent = format(breakTimeLeft);
     breakTimer = setInterval(() => {
-        timeLeft--;
-        timerEl.textContent = format(timeLeft);
-        if (timeLeft <= 0) {
+        breakTimeLeft--;
+        timerEl.textContent = format(breakTimeLeft);
+        if (document.fullscreenElement) {
+            outOfBreakSeconds++;
+        }
+        if (breakTimeLeft <= 0) {
             clearInterval(breakTimer);
             showReenter();
         }
     }, 1000);
 }
 
+// RE-ENTRY HANDLER
 function showReenter() {
     phaseTitle.textContent = 'Rest Complete';
     reenterBtn.classList.remove('hidden');
+    forgeArea.classList.remove('mist');
     let wait = 30;
     reenterTimer = setInterval(() => {
         wait--;
         if (wait <= 0) {
             clearInterval(reenterTimer);
-            bladeBroken = true;
-            finishSession();
+            reenterBtn.classList.add('hidden');
+            startBreakOverheat();
         }
     }, 1000);
+}
+
+function startNextCycle() {
+    if (currentCycle < totalCycles) {
+        startWorkCycle();
+    } else {
+        finishSession();
+    }
 }
 
 reenterBtn.addEventListener('click', () => {
     clearInterval(reenterTimer);
     reenterBtn.classList.add('hidden');
     enterFull();
-    if (currentCycle < totalCycles) {
-        startWorkCycle();
-    } else {
-        finishSession();
-    }
+    startNextCycle();
 });
 
-// Resume forging after pressing ESC
+// TEMPER BUTTON HANDLER
 resumeBtn.addEventListener('click', () => {
-    clearInterval(freezeTimer);
-    enterFull();
+    if (overlayMode === 'freeze') {
+        clearInterval(freezeTimer);
+        overlay.classList.add('hidden');
+        resumeBtn.classList.add('hidden');
+        enterFull();
+        overlayMode = null;
+    } else if (overlayMode === 'end') {
+        clearInterval(overheatTimer);
+        overlay.classList.add('hidden');
+        resumeBtn.classList.add('hidden');
+        overlayMode = null;
+        exitFull();
+        forgeArea.classList.add('mist');
+        if (totalCycles === 1) {
+            // SINGLE-CYCLE SKIP
+            finishSession();
+        } else {
+            startBreakTimer();
+        }
+    } else if (overlayMode === 'break') {
+        clearInterval(overheatTimer);
+        overlay.classList.add('hidden');
+        resumeBtn.classList.add('hidden');
+        overlayMode = null;
+        exitFull();
+        if (breakTimeLeft > 0) {
+            startBreakTimer();
+        } else {
+            enterFull();
+            startNextCycle();
+        }
+    }
 });
 
 // WARP TIMER HANDLERS
 function startFreeze() {
+    overlayMode = 'freeze';
     let wait = 30;
     overlayText.textContent = 'The sword is going cold';
     overlay.classList.remove('hidden');
@@ -187,6 +244,27 @@ function startFreeze() {
         countdown.textContent = wait;
         if (wait <= 0) {
             clearInterval(freezeTimer);
+            bladeBroken = true;
+            finishSession();
+        }
+    }, 1000);
+}
+
+// BREAK OVERHEAT HANDLER
+function startBreakOverheat() {
+    overlayMode = 'break';
+    overlayText.textContent = 'Blade damage imminent';
+    resumeBtn.textContent = 'Cool it down';
+    overlay.classList.remove('hidden');
+    resumeBtn.classList.remove('hidden');
+    let wait = 30;
+    countdown.textContent = wait;
+    clearInterval(overheatTimer);
+    overheatTimer = setInterval(() => {
+        wait--;
+        countdown.textContent = wait;
+        if (wait <= 0) {
+            clearInterval(overheatTimer);
             bladeBroken = true;
             finishSession();
         }
@@ -214,13 +292,15 @@ function finishSession() {
     clearInterval(freezeTimer);
     overlay.classList.add('hidden');
     resumeBtn.classList.add('hidden');
+    overlayMode = null;
     forgeArea.classList.remove('forge-background');
     forgeArea.classList.remove('mist');
+    if (bladeBroken) forgeArea.classList.add('crack');
     exitFull();
     showView(statsView);
     const outcome = bladeBroken ? 'Blade Broken' : 'Blade Forged';
-    summary.innerHTML = `<p>Time out of forge: ${outOfForgeSeconds}s</p>` +
-        `<p>Time outside breaks: ${outOfBreakSeconds}s</p>` +
+    summary.innerHTML = `<p>Out of full-screen during work: ${outOfForgeSeconds}s</p>` +
+        `<p>In full-screen during breaks: ${outOfBreakSeconds}s</p>` +
         `<p>Outcome: ${outcome}</p>`;
     if (!bladeBroken) {
         nameEntry.classList.remove('hidden');
