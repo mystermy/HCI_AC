@@ -12,6 +12,7 @@ const phaseTitle = document.getElementById('phaseTitle');
 const timerEl = document.getElementById('timer');
 const quenchBtn = document.getElementById('quenchBtn');
 const reenterBtn = document.getElementById('reenterBtn');
+const resumeBtn = document.getElementById('resumeBtn');
 const summary = document.getElementById('summary');
 const nameEntry = document.getElementById('nameEntry');
 const bladeNameInput = document.getElementById('bladeName');
@@ -70,6 +71,7 @@ document.addEventListener('fullscreenchange', () => {
     } else if (document.fullscreenElement && freezeTimer) {
         clearInterval(freezeTimer);
         overlay.classList.add('hidden');
+        resumeBtn.classList.add('hidden');
     }
 });
 
@@ -166,11 +168,18 @@ reenterBtn.addEventListener('click', () => {
     }
 });
 
+// Resume forging after pressing ESC
+resumeBtn.addEventListener('click', () => {
+    clearInterval(freezeTimer);
+    enterFull();
+});
+
 // WARP TIMER HANDLERS
 function startFreeze() {
     let wait = 30;
     overlayText.textContent = 'The sword is going cold';
     overlay.classList.remove('hidden');
+    resumeBtn.classList.remove('hidden');
     countdown.textContent = wait;
     freezeTimer = setInterval(() => {
         wait--;
@@ -203,6 +212,8 @@ function finishSession() {
     clearInterval(overheatTimer);
     clearInterval(reenterTimer);
     clearInterval(freezeTimer);
+    overlay.classList.add('hidden');
+    resumeBtn.classList.add('hidden');
     forgeArea.classList.remove('forge-background');
     forgeArea.classList.remove('mist');
     exitFull();
