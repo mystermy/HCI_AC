@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blade Forge</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="menu" class="view">
+        <button id="viewBladesBtn">View Forged Blades</button>
+        <button id="forgeBladeBtn">Forge New Blade</button>
+    </div>
+
+    <div id="bladeList" class="view hidden">
+        <h1>Forged Blades</h1>
+        <ul id="blades"></ul>
+        <button class="backBtn">Back to Menu</button>
+    </div>
+
+    <div id="setup" class="view hidden">
+        <h1>Forge New Blade</h1>
+        <label>Work Duration (minutes)
+            <input type="number" id="workDuration" min="1" value="25">
+        </label>
+        <label>Number of Cycles
+            <input type="number" id="cycles" min="1" value="1">
+        </label>
+        <label>Break Duration (minutes)
+            <input type="number" id="breakDuration" min="1" value="5">
+        </label>
+        <button id="beginBtn">Begin Forging</button>
+        <button class="backBtn">Back to Menu</button>
+    </div>
+
+    <div id="forgeArea" class="view hidden">
+        <h1 id="phaseTitle"></h1>
+        <div id="timer"></div>
+        <button id="quenchBtn" class="hidden">Begin Quench</button>
+        <button id="reenterBtn" class="hidden">Re-enter Forge</button>
+    </div>
+
+    <div id="overlay" class="hidden">
+        <div id="overlayText"></div>
+        <div id="countdown"></div>
+    </div>
+
+    <div id="stats" class="view hidden">
+        <h1>Forge Summary</h1>
+        <div id="summary"></div>
+        <div id="nameEntry" class="hidden">
+            <label>Name Your Blade
+                <input type="text" id="bladeName">
+            </label>
+            <button id="saveBladeBtn">Save Blade</button>
+        </div>
+        <button class="backBtn">Back to Menu</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
