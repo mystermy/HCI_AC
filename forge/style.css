@@ -4,7 +4,7 @@ body {
     padding: 0;
     text-align: center;
     background: #222;
-    color: rgba(53, 71, 159, 0.22);
+    color: rgb(255, 255, 255);
 }
 
 .view {
@@ -89,7 +89,7 @@ button {
 
 @keyframes mist {
     0% { background-color: #224; }
-    50% { background-color: #446; }
+    50% { background-color: #1a1a70; }
     100% { background-color: #224; }
 }
 
