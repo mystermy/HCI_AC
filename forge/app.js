@@ -70,12 +70,12 @@ beginSessionBtn.addEventListener('click', () => {
         return;
     }
     rounds = parseInt(document.getElementById('rounds').value) || 1;
-    const studyMinutes = parseInt(document.getElementById('studyMinutes').value) || 1;
-    studyDuration = studyMinutes * 60;
-    restDuration = (parseInt(document.getElementById('restMinutes').value) || 1) * 60;
-    // Calculate transition limit: 30 seconds base + 1 second per minute of study time
-    transitionLimit = 30 + studyMinutes;
-    // Calculate grace period: 2 seconds base + 1 second for each 2 minutes of study
+    const studyMinutes = parseFloat(document.getElementById('studyMinutes').value) || 1;
+    studyDuration = Math.round(studyMinutes * 60); // Convert to seconds, round to nearest second
+    restDuration = Math.round((parseFloat(document.getElementById('restMinutes').value) || 1) * 60);
+    // Calculate transition limit: 30 seconds base + 1 second per minute of study time (rounded up)
+    transitionLimit = 30 + Math.ceil(studyMinutes);
+    // Calculate grace period: 2 seconds base + 1 second for each 2 minutes of study (rounded up)
     gracePeriodDuration = 2 + Math.floor(studyMinutes / 2);
     currentRound = 1;
     studyRemaining = studyDuration;
@@ -380,9 +380,34 @@ function endSession(success) {
     finalSwordIcon.classList.remove('hidden');
   }
 
-  // Create round-by-round breakdown of transitions
-  let statsHtml = `<p>Outcome: ${outcome}</p><div class="round-stats">`;
+  // Calculate score for this session
+  const tempBlade = {
+    userName: currentUserName,
+    transitions: transitionDurations.slice(),
+    studyDuration: studyDuration,
+    rounds: rounds,
+    transitionLimit: transitionLimit
+  };
+  const scoreResult = calculatePlayerRank([tempBlade]);
+  const scoreChange = scoreResult.lastSessionScore;
 
+  // Calculate maximum possible points (base score with no deductions)
+  const studyMinutes = studyDuration / 60;
+  const maxPossiblePoints = 100 * studyMinutes;
+
+  // Calculate percentage: 100% at max points, 50% at 0 points, 0% at -max points or lower
+  let percentage = 50 + ((scoreChange / maxPossiblePoints) * 50);
+  percentage = Math.max(0, Math.min(100, percentage)); // Clamp between 0 and 100
+
+  // Create score display with color
+  const scoreColor = scoreChange >= 0 ? '#4CAF50' : '#FF5252';
+  let statsHtml = `<p class="score-change" style="color: ${scoreColor}; font-size: 1.5em; font-weight: bold;">
+      Score: ${scoreChange >= 0 ? '+' : ''}${scoreChange}</p>
+      <p style="font-size: 1.2em; margin-top: 10px;">Sword Strength: ${Math.round(percentage)}%</p>`;
+
+  statsHtml += `<p>Outcome: ${outcome}</p><div class="round-stats">`;
+
+  // ...existing code for round-by-round breakdown...
   for (let round = 0; round < rounds; round++) {
     const studyTransition = transitionDurations[round * 2];
     const restTransition = transitionDurations[round * 2 + 1];
@@ -414,31 +439,33 @@ function endSession(success) {
 
 function calculatePlayerRank(blades) {
     let totalScore = 0;
+    let lastSessionScore = 0;
     blades.forEach(blade => {
         const studyMinutes = blade.studyDuration / 60;
         const numSessions = blade.rounds;
         const baseScore = 100 * studyMinutes;
 
-        // Calculate deduction rate: baseScore / (transitionLimit * rounds)
-        // This gives us how many points to deduct per second
-        const deductionRate = baseScore / (blade.transitionLimit * numSessions);
+        // Calculate deduction rate: baseScore / (transitionLimit * rounds) * 2 for increased penalty
+        const deductionRate = (baseScore / (blade.transitionLimit * numSessions)) * 2;
 
         // Process each round's transitions
+        let sessionScore = baseScore;
         for (let i = 0; i < blade.transitions.length; i++) {
             const transitionTime = blade.transitions[i];
 
-            // Calculate points for this round
-            let roundScore = baseScore;
-
             // For each second in transition after grace period, deduct points based on rate
             if (transitionTime > 0) {
-                roundScore -= (transitionTime * deductionRate);
+                sessionScore -= (transitionTime * deductionRate);
             }
-
-            totalScore += roundScore;
         }
+
+        lastSessionScore = sessionScore;
+        totalScore += sessionScore;
     });
-    return Math.round(totalScore);
+    return {
+        totalScore: Math.round(totalScore),
+        lastSessionScore: Math.round(lastSessionScore)
+    };
 }
 
 function renderBladeList() {
@@ -459,13 +486,19 @@ function renderBladeList() {
         const rank = calculatePlayerRank(playerBlades[currentUserName]);
         playerStatsEl.innerHTML = `
             <div class="player-name">${currentUserName}</div>
-            <div class="player-rank">Rank: ${rank}</div>
+            <div class="player-rank">Rank: ${rank.totalScore}</div>
         `;
 
         // Show current player's blades
         const blades = playerBlades[currentUserName];
         bladeListEl.innerHTML = '<h2>Your Forged Blades</h2>';
         blades.forEach(blade => {
+            const singleBladeRank = calculatePlayerRank([blade]);
+            const scoreChange = singleBladeRank.lastSessionScore;
+            const maxPossiblePoints = 100 * (blade.studyDuration / 60);
+            let percentage = 50 + ((scoreChange / maxPossiblePoints) * 50);
+            percentage = Math.max(0, Math.min(100, percentage));
+
             const li = document.createElement('li');
             const bladeInfo = document.createElement('div');
             bladeInfo.className = 'blade-info';
@@ -476,6 +509,9 @@ function renderBladeList() {
                     <span class="blade-name">${blade.name}</span>
                     <span class="blade-stats">Study Duration: ${blade.studyDuration/60} minutes, ${blade.rounds} rounds</span>
                     <span class="blade-stats">Transitions: [${blade.transitions.join(', ')}]</span>
+                    <span class="blade-stats" style="color: ${scoreChange >= 0 ? '#4CAF50' : '#FF5252'}">
+                        Score: ${scoreChange >= 0 ? '+' : ''}${scoreChange} (Strength: ${Math.round(percentage)}%)
+                    </span>
                 </div>
             `;
 

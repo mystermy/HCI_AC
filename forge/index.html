@@ -29,11 +29,14 @@
         <input type="number" id="rounds" min="1" value="1">
     </label>
     <label>Studying Duration (minutes)
-        <input type="number" id="studyMinutes" min="1" value="25">
+        <input type="number" id="studyMinutes" min="0.0166667" value="25" step="0.0166667">
     </label>
     <label>Rest Duration (minutes)
-        <input type="number" id="restMinutes" min="1" value="5">
+        <input type="number" id="restMinutes" min="0.0166667" value="5" step="0.0166667">
     </label>
+    <div style="font-size: 0.8em; color: #aaa; margin: 10px 0;">
+        Use decimals for seconds (e.g., 0.5 = 30 seconds)
+    </div>
     <button id="beginSession" class="play-sound">Begin Session</button>
     <button class="backMenu">Back to Menu</button>
 </div>
