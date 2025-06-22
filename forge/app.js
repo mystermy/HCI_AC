@@ -403,7 +403,7 @@ function endSession(success) {
   const scoreColor = scoreChange >= 0 ? '#4CAF50' : '#FF5252';
   let statsHtml = `<p class="score-change" style="color: ${scoreColor}; font-size: 1.5em; font-weight: bold;">
       Score: ${scoreChange >= 0 ? '+' : ''}${scoreChange}</p>
-      <p style="font-size: 1.2em; margin-top: 10px;">Sword Strength: ${Math.round(percentage)}%</p>`;
+      <p style="font-size: 1.2em; margin-top: 10px; color: #00bfff;">Sword Strength: ${Math.round(percentage)}%</p>`;
 
   statsHtml += `<p>Outcome: ${outcome}</p><div class="round-stats">`;
 
@@ -509,9 +509,14 @@ function renderBladeList() {
                     <span class="blade-name">${blade.name}</span>
                     <span class="blade-stats">Study Duration: ${blade.studyDuration/60} minutes, ${blade.rounds} rounds</span>
                     <span class="blade-stats">Transitions: [${blade.transitions.join(', ')}]</span>
-                    <span class="blade-stats" style="color: ${scoreChange >= 0 ? '#4CAF50' : '#FF5252'}">
-                        Score: ${scoreChange >= 0 ? '+' : ''}${scoreChange} (Strength: ${Math.round(percentage)}%)
-                    </span>
+                    <div class="blade-stats">
+                        <span style="color: ${scoreChange >= 0 ? '#4CAF50' : '#FF5252'}">
+                            Score: ${scoreChange >= 0 ? '+' : ''}${scoreChange}
+                        </span>
+                        <span style="color: #00bfff; margin-left: 10px;">
+                            Strength: ${Math.round(percentage)}%
+                        </span>
+                    </div>
                 </div>
             `;
 
