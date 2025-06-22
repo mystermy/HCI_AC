@@ -15,6 +15,9 @@
 
 <div id="menu" class="view hidden">
     <img id="menuImage" src="../sword_cabin.png" alt="Sword cabin">
+    <label>Your Name
+        <input type="text" id="playerName" placeholder="Enter your name">
+    </label>
     <button id="startForge">Forge a Sword</button>
     <button id="showList">List of Forged Swords</button>
 </div>
@@ -67,7 +70,7 @@
 </div>
 
 <div id="listView" class="view hidden">
-    <h1>Forged Swords</h1>
+    <h1 id="listTitle">Forged Swords</h1>
     <ul id="bladeList"></ul>
     <button class="backMenu">Back to Menu</button>
 </div>

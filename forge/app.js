@@ -28,6 +28,8 @@ const bladeListEl = document.getElementById('bladeList');
 const statsEl = document.getElementById('stats');
 const nameEntry = document.getElementById('nameEntry');
 const bladeNameInput = document.getElementById('bladeName');
+const playerNameInput = document.getElementById('playerName');
+const listTitle = document.getElementById('listTitle');
 const forgeImageWrapper = document.getElementById('forgeImageWrapper');
 const coolingImageWrapper = document.getElementById('coolingImageWrapper');
 const overlayImageWrapper = document.getElementById('overlayImageWrapper');
@@ -62,9 +64,10 @@ beginSessionBtn.addEventListener('click', () => {
 backButtons.forEach(btn => btn.addEventListener('click', () => showView(menu)));
 
 saveBladeBtn.addEventListener('click', () => {
-  const name = bladeNameInput.value.trim();
-  if (name) {
-    forgedBlades.push({ name, transitions: transitionDurations.slice() });
+  const bladeName = bladeNameInput.value.trim();
+  const player = playerNameInput.value.trim() || 'Unknown';
+  if (bladeName) {
+    forgedBlades.push({ bladeName, player, transitions: transitionDurations.slice() });
     bladeNameInput.value = '';
   }
   showView(menu);
@@ -329,9 +332,14 @@ function endSession(success) {
 
 function renderBladeList() {
   bladeListEl.innerHTML = '';
+  const player = playerNameInput.value.trim() || 'Unknown';
+  if (listTitle) {
+    listTitle.textContent = `Forged Swords - ${player}`;
+  }
   forgedBlades.forEach(blade => {
     const li = document.createElement('li');
-    li.innerHTML = `<img src="../sword_icon.png" alt="sword icon" class="list-icon"> ${blade.name} - [${blade.transitions.join(', ')}]`;
+    const displayPlayer = blade.player || player;
+    li.innerHTML = `<img src="../sword_icon.png" alt="sword icon" class="list-icon"> ${blade.bladeName} - ${displayPlayer} - [${blade.transitions.join(', ')}]`;
     bladeListEl.appendChild(li);
   });
 }
