@@ -64,8 +64,8 @@ personalisedModeBtn.addEventListener('click', () => {
 
 startForgeBtn.addEventListener('click', () => showView(formView));
 showListBtn.addEventListener('click', () => {
-  renderBladeList();
-  showView(listView);
+    renderBladeList();
+    showView(listView);
 });
 
 // Add show results button handler
@@ -126,16 +126,22 @@ saveBladeBtn.addEventListener('click', () => {
                 problemArea = 'managing break time';
             }
 
+            const tips = [
+                { area: 'maintaining focus during study', tip: 'Try to eliminate distractions before starting your study session' },
+                { area: 'managing study time', tip: 'Set a timer to help you track your study duration' },
+                { area: 'managing break time', tip: 'Set an alarm for your break time to avoid over-extending' }
+            ];
+
             if (selectedMode === 'personalised') {
                 const avgTransition = Math.round(maxTransition / rounds);
                 let tipText = '';
 
                 if (maxTransition === totalBurning) {
-                    tipText = 'Try to eliminate distractions before starting your study session';
+                    tipText = tips[0].tip;
                 } else if (maxTransition === totalMelting) {
-                    tipText = 'Set a timer to help you track your study duration';
+                    tipText = tips[1].tip;
                 } else {
-                    tipText = 'Set an alarm for your break time to avoid over-extending';
+                    tipText = tips[2].tip;
                 }
 
                 improvementMsg = {
@@ -144,20 +150,11 @@ saveBladeBtn.addEventListener('click', () => {
                     tip: tipText
                 };
             } else if (selectedMode === 'random') {
-                const randomTips = [
-                    'Try studying in a quiet environment to maintain better focus',
-                    'Take short breaks between study sessions to stay refreshed',
-                    'Use a timer to track your study and break periods',
-                    'Remove distractions like phones before starting',
-                    'Stay hydrated during your study sessions',
-                    'Make sure your study area is well-lit and comfortable',
-                    'Try the Pomodoro technique: 25 minutes of study, 5 minutes break',
-                    'Review your material briefly before starting a session'
-                ];
-                const randomTip = randomTips[Math.floor(Math.random() * randomTips.length)];
+                // Randomly select a tip from the same tips used in personalized mode
+                const randomTip = tips[Math.floor(Math.random() * tips.length)];
                 improvementMsg = {
                     type: 'random',
-                    tip: randomTip
+                    tip: randomTip.tip
                 };
             }
         }
@@ -558,13 +555,16 @@ function calculatePlayerRank(blades) {
 
         // Process each round's transitions
         let sessionScore = baseScore;
-        for (let i = 0; i < blade.transitions.length; i++) {
-            const transitionTime = blade.transitions[i];
+        for (let i = 0; i < blade.rounds; i++) {
+            // Sum up all types of transitions
+            const burning = blade.burning ? (blade.burning[i] || 0) : 0;
+            const melting = blade.melting ? (blade.melting[i] || 0) : 0;
+            const rusting = blade.rusting ? (blade.rusting[i] || 0) : 0;
 
-            // For each second in transition after grace period, deduct points based on rate
-            if (transitionTime > 0) {
-                sessionScore -= (transitionTime * deductionRate);
-            }
+            // Deduct points for each type of transition
+            sessionScore -= (burning * deductionRate);
+            sessionScore -= (melting * deductionRate);
+            sessionScore -= (rusting * deductionRate);
         }
 
         lastSessionScore = sessionScore;
@@ -629,14 +629,20 @@ function renderBladeList() {
         // Create improvement suggestions based on mode
         let improvementMsg = '';
         if (maxTransition > 0) {
+            const tips = [
+                { area: 'maintaining focus during study', tip: 'Try to eliminate distractions before starting your study session' },
+                { area: 'managing study time', tip: 'Set a timer to help you track your study duration' },
+                { area: 'managing break time', tip: 'Set an alarm for your break time to avoid over-extending' }
+            ];
+
             if (selectedMode === 'personalised') {
                 let tipText = '';
                 if (maxTransition === totalBurning) {
-                    tipText = 'Try to eliminate distractions before starting your study session';
+                    tipText = tips[0].tip;
                 } else if (maxTransition === totalMelting) {
-                    tipText = 'Set a timer to help you track your study duration';
+                    tipText = tips[1].tip;
                 } else {
-                    tipText = 'Set an alarm for your break time to avoid over-extending';
+                    tipText = tips[2].tip;
                 }
 
                 improvementMsg = `<div style="color: #FFA500; margin-top: 10px; text-align: left;">
@@ -645,21 +651,11 @@ function renderBladeList() {
                     <div style="font-size: 0.9em; color: #FFD700;">${tipText}</div>
                 </div>`;
             } else if (selectedMode === 'random') {
-                const randomTips = [
-                    'Try studying in a quiet environment to maintain better focus',
-                    'Take short breaks between study sessions to stay refreshed',
-                    'Use a timer to track your study and break periods',
-                    'Remove distractions like phones before starting',
-                    'Stay hydrated during your study sessions',
-                    'Make sure your study area is well-lit and comfortable',
-                    'Try the Pomodoro technique: 25 minutes of study, 5 minutes break',
-                    'Review your material briefly before starting a session'
-                ];
-                const randomTip = randomTips[Math.floor(Math.random() * randomTips.length)];
-
+                // Randomly select a tip from the same tips used in personalized mode
+                const randomTip = tips[Math.floor(Math.random() * tips.length)];
                 improvementMsg = `<div style="color: #FFA500; margin-top: 10px; text-align: left;">
                     <div style="font-size: 1.2em; color: #FFD700; margin-bottom: 15px;">Random Study Tip</div>
-                    <div style="font-size: 0.9em; color: #FFD700;">${randomTip}</div>
+                    <div style="font-size: 0.9em; color: #FFD700;">${randomTip.tip}</div>
                 </div>`;
             }
         }
