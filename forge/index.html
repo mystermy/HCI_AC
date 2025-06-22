@@ -20,8 +20,10 @@
 
 <div id="menu" class="view hidden">
     <img id="menuImage" src="../sword_cabin.png" alt="Sword cabin">
+    <div id="currentMode" class="mode-display"></div>
     <button id="startForge" class="play-sound">Forge a Sword</button>
     <button id="showList" class="play-sound">User Menu</button>
+    <button id="showResults" class="play-sound">Show All Results</button>
 </div>
 
 <div id="formView" class="view hidden">
@@ -38,7 +40,7 @@
         Use decimals for seconds (e.g., 0.5 = 30 seconds)
     </div>
     <button id="beginSession" class="play-sound">Begin Session</button>
-    <button class="backMenu">Trash the Sword</button>
+    <button class="backMenu">Back to Menu</button>
 </div>
 
 <div id="sessionView" class="view hidden">
@@ -71,7 +73,7 @@
         </label>
         <button id="saveBlade">Save</button>
     </div>
-    <button class="backMenu">Back to Menu</button>
+    <button class="backMenu">Trash the Sword</button>
     <img id="finalSwordIcon" src="../sword_final.png" alt="Final sword" class="hidden">
     <img id="brokenIcon" src="../sword_broken.png" alt="Broken sword" class="hidden">
     <div id="stats"></div>
@@ -81,6 +83,11 @@
     <h1>Player Menu</h1>
     <div id="playerStats" class="player-stats"></div>
     <ul id="bladeList"></ul>
+    <button class="backMenu">Back to Menu</button>
+</div>
+
+<div id="resultsView" class="view hidden">
+    <h1>Study Results</h1>
     <button class="backMenu">Back to Menu</button>
 </div>
 

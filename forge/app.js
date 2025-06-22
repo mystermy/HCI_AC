@@ -36,6 +36,9 @@ const brokenIcon = document.getElementById('brokenIcon');
 const finalSwordIcon = document.getElementById('finalSwordIcon');
 const timerSound = document.getElementById('timerSound');
 
+// Track selected mode
+let selectedMode = '';
+
 // FORM HANDLERS
 randomModeBtn.addEventListener('click', () => {
     const userName = document.getElementById('userName').value.trim();
@@ -44,6 +47,7 @@ randomModeBtn.addEventListener('click', () => {
         return;
     }
     currentUserName = userName;
+    selectedMode = 'random';
     showView(menu);
 });
 
@@ -54,6 +58,7 @@ personalisedModeBtn.addEventListener('click', () => {
         return;
     }
     currentUserName = userName;
+    selectedMode = 'personalised';
     showView(menu);
 });
 
@@ -61,6 +66,11 @@ startForgeBtn.addEventListener('click', () => showView(formView));
 showListBtn.addEventListener('click', () => {
   renderBladeList();
   showView(listView);
+});
+
+// Add show results button handler
+document.getElementById('showResults').addEventListener('click', () => {
+  generateResultsTable();
 });
 
 beginSessionBtn.addEventListener('click', () => {
@@ -119,6 +129,15 @@ function showView(view) {
   phaseTimer = null;
   clearInterval(transitionTimer);
   transitionTimer = null;
+
+  // Update mode display in menu
+  if (view === menu) {
+    const modeDisplay = document.getElementById('currentMode');
+    if (modeDisplay) {
+      modeDisplay.textContent = `Current Mode: ${selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)}`;
+    }
+  }
+
   if (view !== sessionView) exitFullscreen();
 }
 
@@ -514,22 +533,41 @@ function renderBladeList() {
         const avgStudyTransition = studyTransitionCount > 0 ? Math.round(totalStudyTransitions / studyTransitionCount) : 0;
         const avgRestTransition = restTransitionCount > 0 ? Math.round(totalRestTransitions / restTransitionCount) : 0;
 
-        // Create detailed improvement suggestions
+        // Create improvement suggestions based on mode
         let improvementMsg = '';
         if (longestTransition > 0) {
-            const focusType = isForgeTransition ?
-                `maintaining focus during study (avg. ${avgStudyTransition}s lost)` :
-                `taking proper break length (avg. ${avgRestTransition}s over)`;
+            if (selectedMode === 'personalised') {
+                const focusType = isForgeTransition ?
+                    `maintaining focus during study (avg. ${avgStudyTransition}s lost)` :
+                    `taking proper break length (avg. ${avgRestTransition}s over)`;
 
-            const tipText = isForgeTransition ?
-                'Tip: Try to eliminate distractions before starting your study session' :
-                'Tip: Set an alarm for your break time to avoid over-extending';
+                const tipText = isForgeTransition ?
+                    'Tip: Try to eliminate distractions before starting your study session' :
+                    'Tip: Set an alarm for your break time to avoid over-extending';
 
-            improvementMsg = `<div style="color: #FFA500; margin-top: 10px; text-align: left;">
-                <div style="font-size: 1.2em; color: #FFD700; margin-bottom: 15px;">Study Improvement Tips</div>
-                <div style="margin-bottom: 10px;">Area to improve: ${focusType}</div>
-                <div style="font-size: 0.9em; color: #FFD700;">${tipText}</div>
-            </div>`;
+                improvementMsg = `<div style="color: #FFA500; margin-top: 10px; text-align: left;">
+                    <div style="font-size: 1.2em; color: #FFD700; margin-bottom: 15px;">Study Improvement Tips</div>
+                    <div style="margin-bottom: 10px;">Area to improve: ${focusType}</div>
+                    <div style="font-size: 0.9em; color: #FFD700;">${tipText}</div>
+                </div>`;
+            } else if (selectedMode === 'random') {
+                const randomTips = [
+                    'Try studying in a quiet environment to maintain better focus',
+                    'Take short breaks between study sessions to stay refreshed',
+                    'Use a timer to track your study and break periods',
+                    'Remove distractions like phones before starting',
+                    'Stay hydrated during your study sessions',
+                    'Make sure your study area is well-lit and comfortable',
+                    'Try the Pomodoro technique: 25 minutes of study, 5 minutes break',
+                    'Review your material briefly before starting a session'
+                ];
+                const randomTip = randomTips[Math.floor(Math.random() * randomTips.length)];
+
+                improvementMsg = `<div style="color: #FFA500; margin-top: 10px; text-align: left;">
+                    <div style="font-size: 1.2em; color: #FFD700; margin-bottom: 15px;">Random Study Tip</div>
+                    <div style="font-size: 0.9em; color: #FFD700;">${randomTip}</div>
+                </div>`;
+            }
         }
 
         playerStatsEl.innerHTML = `
@@ -581,6 +619,73 @@ function renderBladeList() {
             <div class="player-rank">No swords forged yet</div>
         `;
     }
+}
+
+function generateResultsTable() {
+    // Get reference to the results view and preserve the back button if it exists
+    const resultsView = document.getElementById('resultsView');
+    const backButton = resultsView.querySelector('.backMenu');
+
+    // Create table headers
+    let tableHTML = `
+        <div class="results-table">
+            <h2>Study Session Results</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>User Name</th>
+                        <th>Blade Name</th>
+                        <th>Mode</th>
+                        <th>Study Duration (min)</th>
+                        <th>Rounds</th>
+                        <th>Score</th>
+                        <th>Quality</th>
+                        <th>Transitions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    // Add each blade's data
+    forgedBlades.forEach(blade => {
+        const studyMinutes = blade.studyDuration / 60;
+        const singleBladeRank = calculatePlayerRank([blade]);
+        const scoreChange = singleBladeRank.lastSessionScore;
+        const maxPossiblePoints = 100 * studyMinutes;
+        let percentage = 50 + ((scoreChange / maxPossiblePoints) * 50);
+        percentage = Math.max(0, Math.min(100, percentage));
+
+        tableHTML += `
+            <tr>
+                <td>${blade.userName}</td>
+                <td>${blade.name}</td>
+                <td>${selectedMode}</td>
+                <td>${studyMinutes}</td>
+                <td>${blade.rounds}</td>
+                <td>${scoreChange}</td>
+                <td>${Math.round(percentage)}%</td>
+                <td>${blade.transitions.join(', ')}</td>
+            </tr>
+        `;
+    });
+
+    tableHTML += `
+            </tbody>
+        </table>
+    </div>`;
+
+    // Clear the view and add the table
+    resultsView.innerHTML = `
+        <h1>Study Results</h1>
+        ${tableHTML}
+    `;
+
+    // Re-add the back button
+    if (backButton) {
+        resultsView.appendChild(backButton);
+    }
+
+    showView(resultsView);
 }
 
 function format(s) {

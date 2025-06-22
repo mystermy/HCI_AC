@@ -296,3 +296,43 @@ button {
     margin: 30px 0 20px 0;
     text-align: center;
 }
+
+.mode-display {
+    background: rgba(255, 215, 0, 0.1);
+    color: #FFD700;
+    padding: 10px;
+    margin: 10px auto;
+    border-radius: 5px;
+    font-size: 1.2em;
+    max-width: 300px;
+}
+
+.results-table {
+    margin: 20px auto;
+    max-width: 1000px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.results-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.results-table th,
+.results-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.results-table th {
+    background: rgba(255, 215, 0, 0.2);
+    color: #FFD700;
+}
+
+.results-table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
