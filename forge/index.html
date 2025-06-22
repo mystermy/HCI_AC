@@ -9,14 +9,19 @@
 <body>
 <div id="modeMenu" class="view">
     <p>Select your mode</p>
+    <div class="name-input">
+        <label>Your Name
+            <input type="text" id="userName" placeholder="Enter your name">
+        </label>
+    </div>
     <button id="randomMode">Random Mode</button>
     <button id="personalisedMode">Personalised Mode</button>
 </div>
 
 <div id="menu" class="view hidden">
     <img id="menuImage" src="../sword_cabin.png" alt="Sword cabin">
-    <button id="startForge">Forge a Sword</button>
-    <button id="showList">List of Forged Swords</button>
+    <button id="startForge" class="play-sound">Forge a Sword</button>
+    <button id="showList" class="play-sound">List of Forged Swords</button>
 </div>
 
 <div id="formView" class="view hidden">
@@ -29,7 +34,7 @@
     <label>Rest Duration (minutes)
         <input type="number" id="restMinutes" min="1" value="5">
     </label>
-    <button id="beginSession">Begin Session</button>
+    <button id="beginSession" class="play-sound">Begin Session</button>
     <button class="backMenu">Back to Menu</button>
 </div>
 
@@ -50,13 +55,13 @@
         <img id="overlayImage" src="" alt="">
     </div>
     <div id="overlayHeader"></div>
+    <div id="graceCountdown" class="grace-countdown"></div>
     <div id="overlayCountdown"></div>
     <button id="overlayBtn"></button>
 </div>
 
 <div id="statsView" class="view hidden">
-    <div id="stats"></div>
-    <img id="brokenIcon" src="../sword_broken.png" alt="Broken sword" class="hidden">
+    <h1 class="forge-title">You Forged a Sword!</h1>
     <div id="nameEntry" class="hidden">
         <label>Blade Name
             <input type="text" id="bladeName">
@@ -64,14 +69,19 @@
         <button id="saveBlade">Save</button>
     </div>
     <button class="backMenu">Back to Menu</button>
+    <img id="finalSwordIcon" src="../sword_final.png" alt="Final sword" class="hidden">
+    <img id="brokenIcon" src="../sword_broken.png" alt="Broken sword" class="hidden">
+    <div id="stats"></div>
 </div>
 
 <div id="listView" class="view hidden">
-    <h1>Forged Swords</h1>
+    <h1>Player Menu</h1>
+    <div id="playerStats" class="player-stats"></div>
     <ul id="bladeList"></ul>
     <button class="backMenu">Back to Menu</button>
 </div>
 
+<audio id="timerSound" src="../clock_timer.mp3"></audio>
 <script src="app.js"></script>
 </body>
 </html>

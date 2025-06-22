@@ -33,10 +33,29 @@ const coolingImageWrapper = document.getElementById('coolingImageWrapper');
 const overlayImageWrapper = document.getElementById('overlayImageWrapper');
 const overlayImage = document.getElementById('overlayImage');
 const brokenIcon = document.getElementById('brokenIcon');
+const finalSwordIcon = document.getElementById('finalSwordIcon');
+const timerSound = document.getElementById('timerSound');
 
 // FORM HANDLERS
-randomModeBtn.addEventListener('click', () => showView(menu));
-personalisedModeBtn.addEventListener('click', () => showView(menu));
+randomModeBtn.addEventListener('click', () => {
+    const userName = document.getElementById('userName').value.trim();
+    if (!userName) {
+        alert('Please enter your name');
+        return;
+    }
+    currentUserName = userName;
+    showView(menu);
+});
+
+personalisedModeBtn.addEventListener('click', () => {
+    const userName = document.getElementById('userName').value.trim();
+    if (!userName) {
+        alert('Please enter your name');
+        return;
+    }
+    currentUserName = userName;
+    showView(menu);
+});
 
 startForgeBtn.addEventListener('click', () => showView(formView));
 showListBtn.addEventListener('click', () => {
@@ -45,29 +64,43 @@ showListBtn.addEventListener('click', () => {
 });
 
 beginSessionBtn.addEventListener('click', () => {
-  rounds = parseInt(document.getElementById('rounds').value) || 1;
-  studyDuration = (parseInt(document.getElementById('studyMinutes').value) || 1) * 60;
-  restDuration = (parseInt(document.getElementById('restMinutes').value) || 1) * 60;
-  currentRound = 1;
-  studyRemaining = studyDuration;
-  restRemaining = restDuration;
-  transitionDurations = [];
-  outOfFull = 0;
-  inFullDuringRest = 0;
-  outcome = 'Blade Forged';
-  showView(sessionView);
-  startStudy();
+    currentUserName = document.getElementById('userName').value.trim();
+    if (!currentUserName) {
+        alert('Please enter your name');
+        return;
+    }
+    rounds = parseInt(document.getElementById('rounds').value) || 1;
+    const studyMinutes = parseInt(document.getElementById('studyMinutes').value) || 1;
+    studyDuration = studyMinutes * 60;
+    restDuration = (parseInt(document.getElementById('restMinutes').value) || 1) * 60;
+    // Calculate transition limit: 30 seconds base + 1 second per minute of study time
+    transitionLimit = 30 + studyMinutes;
+    // Calculate grace period: 2 seconds base + 1 second for each 2 minutes of study
+    gracePeriodDuration = 2 + Math.floor(studyMinutes / 2);
+    currentRound = 1;
+    studyRemaining = studyDuration;
+    restRemaining = restDuration;
+    transitionDurations = [];
+    outOfFull = 0;
+    inFullDuringRest = 0;
+    outcome = 'Blade Forged';
+    showView(sessionView);
+    startStudy();
 });
 
 backButtons.forEach(btn => btn.addEventListener('click', () => showView(menu)));
 
 saveBladeBtn.addEventListener('click', () => {
-  const name = bladeNameInput.value.trim();
-  if (name) {
-    forgedBlades.push({ name, transitions: transitionDurations.slice() });
-    bladeNameInput.value = '';
-  }
-  showView(menu);
+    const name = bladeNameInput.value.trim();
+    if (name) {
+        forgedBlades.push({
+            name,
+            userName: currentUserName,
+            transitions: transitionDurations.slice()
+        });
+        bladeNameInput.value = '';
+    }
+    showView(menu);
 });
 
 function showView(view) {
@@ -99,12 +132,15 @@ let phaseTimer = null;
 let outOfFull = 0;
 let inFullDuringRest = 0;
 let outcome = 'Blade Forged';
+let currentUserName = '';
+let transitionLimit = 30; // Base transition time
+let gracePeriodDuration = 2; // Base grace period
 const forgedBlades = [];
 let ignoreFsChange = false;
 
 // STUDY PHASE LOGIC
 function startStudy() {
-  phaseHeader.textContent = `Studying — Round ${currentRound} of ${rounds}`;
+  phaseHeader.textContent = `Studying \n Round ${currentRound} of ${rounds}`;
   leaveForgeBtn.classList.remove('hidden');
   document.body.classList.remove('mist');
   document.body.classList.remove('cooling-background');
@@ -138,7 +174,7 @@ function leaveStudy() {
     endSession(true);
   } else {
     showTransition(
-        'Leave full-screen within 30s or forging fails!',
+        'The sword is not being watched it might break!',
         'Return to Forge',
         () => {
           requestFullscreen(sessionView);
@@ -192,9 +228,16 @@ function startRest() {
 // TRANSITION TIMERS
 function showTransition(text, btnText, onConfirm, imgSrc = null, overlayClass = '') {
   let elapsed = 0;
+  let gracePeriod = true;
+  const graceCountdownEl = document.getElementById('graceCountdown');
+
   overlayHeader.textContent = text;
-  overlayCountdown.textContent = 30;
+  overlayCountdown.textContent = transitionLimit;
+  graceCountdownEl.textContent = `Grace Period: ${gracePeriodDuration}s`;
   overlayBtn.textContent = btnText;
+  timerSound.currentTime = 0;
+  timerSound.play();
+
   if (imgSrc) {
     overlayImage.src = imgSrc;
     overlayImageWrapper.classList.remove('hidden');
@@ -204,23 +247,41 @@ function showTransition(text, btnText, onConfirm, imgSrc = null, overlayClass = 
   overlay.classList.remove('hidden');
   overlay.classList.remove('burning-glow', 'rusting-glow');
   if (overlayClass) overlay.classList.add(overlayClass);
+
   overlayBtn.onclick = () => {
+    timerSound.pause();
+    timerSound.currentTime = 0;
     clearInterval(transitionTimer);
     transitionTimer = null;
     overlay.classList.add('hidden');
     overlay.classList.remove('burning-glow', 'rusting-glow');
-    transitionDurations.push(elapsed);
+    // Only count the time after grace period
+    const countedTime = Math.max(0, elapsed - gracePeriodDuration);
+    transitionDurations.push(countedTime);
     onConfirm();
   };
+
   transitionTimer = setInterval(() => {
     elapsed++;
-    overlayCountdown.textContent = 30 - elapsed;
-    if (elapsed >= 30) {
+
+    // Update the grace period countdown if we're still in grace period
+    if (elapsed <= gracePeriodDuration) {
+      graceCountdownEl.textContent = `Grace Period: ${gracePeriodDuration - elapsed}s`;
+    } else if (elapsed === gracePeriodDuration + 1) {
+      graceCountdownEl.textContent = 'Grace Period Ended!';
+      overlayHeader.textContent = text + "\nTransitions now count!";
+    }
+
+    // Update the main countdown (showing remaining time excluding grace period)
+    overlayCountdown.textContent = transitionLimit - Math.max(0, elapsed - gracePeriodDuration);
+
+
+    if (elapsed >= transitionLimit + gracePeriodDuration) {
       clearInterval(transitionTimer);
       transitionTimer = null;
       overlay.classList.add('hidden');
       overlay.classList.remove('burning-glow', 'rusting-glow');
-      transitionDurations.push(30);
+      transitionDurations.push(transitionLimit);
       endSession(false);
     }
   }, 1000);
@@ -230,7 +291,7 @@ function overheated() {
   exitFullscreen();
   showTransition(
       'The sword is overheating!',
-      'Go Back',
+      'Cool it Down',
       () => {
         if (currentRound >= rounds) {
           endSession(true);
@@ -246,7 +307,7 @@ function overheated() {
 function startCoolDown() {
   clearInterval(phaseTimer);
   phaseTimer = null;
-  showTransition('Sword is burning', 'Cool Down', () => {
+  showTransition('Sword is burning', 'Cool it Down', () => {
     exitFullscreen();
     startRestTimer();
   });
@@ -308,32 +369,66 @@ function endSession(success) {
   phaseTimer = null;
   exitFullscreen();
 
-  // Log the values for debugging
-  console.log('outOfFull:', outOfFull);
-  console.log('inFullDuringRest:', inFullDuringRest);
+  if (!success) {
+    outcome = 'Blade Broke';
+    brokenIcon.classList.remove('hidden');
+    finalSwordIcon.classList.add('hidden');
+  } else {
+    brokenIcon.classList.add('hidden');
+    finalSwordIcon.classList.remove('hidden');
+  }
 
-  if (!success) outcome = 'Blade Broke';
-  statsEl.innerHTML = `
-    <p>Total seconds out of full-screen during Studying Phases: ${transitionDurations.filter((_, index) => index % 2 === 0).join(', ')}</p>
-    <p>Total seconds inside full-screen during Rest Phases: ${transitionDurations.filter((_, index) => index % 2 !== 0).join(', ')}</p>
-    <p>Outcome: ${outcome}</p>`;
+  // Create round-by-round breakdown of transitions
+  let statsHtml = `<p>Outcome: ${outcome}</p><div class="round-stats">`;
+
+  for (let round = 0; round < rounds; round++) {
+    const studyTransition = transitionDurations[round * 2];
+    const restTransition = transitionDurations[round * 2 + 1];
+
+    statsHtml += `<div class="round-detail">
+      <h3>Round ${round + 1}</h3>`;
+
+    if (studyTransition !== undefined) {
+      statsHtml += `<p>Sword was not watched for ${studyTransition} seconds</p>`;
+    }
+
+    if (restTransition !== undefined) {
+      statsHtml += `<p>Sword was burning for ${restTransition} seconds</p>`;
+    }
+
+    statsHtml += `</div>`;
+  }
+
+  statsHtml += '</div>';
+  statsEl.innerHTML = statsHtml;
+
   if (success) {
     nameEntry.classList.remove('hidden');
-    brokenIcon.classList.add('hidden');
   } else {
     nameEntry.classList.add('hidden');
-    brokenIcon.classList.remove('hidden');
   }
   showView(statsView);
 }
 
 function renderBladeList() {
-  bladeListEl.innerHTML = '';
-  forgedBlades.forEach(blade => {
-    const li = document.createElement('li');
-    li.innerHTML = `<img src="../sword_icon.png" alt="sword icon" class="list-icon"> ${blade.name} - [${blade.transitions.join(', ')}]`;
-    bladeListEl.appendChild(li);
-  });
+    bladeListEl.innerHTML = '';
+    forgedBlades.forEach(blade => {
+        const li = document.createElement('li');
+        const bladeInfo = document.createElement('div');
+        bladeInfo.className = 'blade-info';
+
+        bladeInfo.innerHTML = `
+            <img src="../sword_icon.png" alt="sword icon" class="list-icon">
+            <div class="blade-details">
+                <span class="blade-name">${blade.name}</span>
+                <span class="blade-creator">Forged by: ${blade.userName}</span>
+                <span class="blade-stats">Transitions: [${blade.transitions.join(', ')}]</span>
+            </div>
+        `;
+
+        li.appendChild(bladeInfo);
+        bladeListEl.appendChild(li);
+    });
 }
 
 function format(s) {

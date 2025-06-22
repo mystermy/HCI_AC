@@ -36,10 +36,11 @@ button {
 }
 
 .list-icon {
-    width: 20px;
-    height: 20px;
+    width: 50px;
+    height: 50px;
     vertical-align: middle;
-    margin-right: 5px;
+    margin-right: 15px;
+    object-fit: contain;
 }
 
 .timer {
@@ -126,13 +127,12 @@ button {
 
 /* cooling phase background */
 .cooling-background {
-    animation: coolingGlow 10s infinite;
+    animation: coolingGlow 10s alternate infinite;
 }
 
 @keyframes coolingGlow {
     0% { background-color: rgba(11, 128, 239, 0.2); }
-    50% { background-color: rgba(4, 131, 255, 0.54); }
-    100% { background-color: rgba(35, 94, 155, 0.82); }
+    100% { background-color: rgba(4, 131, 255, 0.54); }
 }
 
 /* overlay glow effects */
@@ -154,4 +154,116 @@ button {
     0% { background-color: rgba(50, 40, 20, 0.8); }
     50% { background-color: rgba(70, 50, 30, 0.8); }
     100% { background-color: rgba(50, 40, 20, 0.8); }
+}
+
+.name-input {
+    margin: 20px auto;
+    padding: 10px;
+}
+
+.name-input input {
+    padding: 8px;
+    margin: 5px;
+    font-size: 1em;
+}
+
+#bladeList li {
+    margin: 15px 0;
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: left;
+}
+
+.blade-info {
+    display: grid;
+    grid-template-columns: 50px 1fr;
+    gap: 15px;
+    align-items: center;
+    min-height: 60px;
+}
+
+.blade-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.blade-name {
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.blade-creator {
+    font-style: italic;
+    color: #aaa;
+}
+
+#finalSwordIcon {
+    display: block;
+    margin: 20px auto;
+    width: 200px;
+    height: auto;
+}
+
+.round-stats {
+    margin: 20px auto;
+    max-width: 600px;
+}
+
+.round-detail {
+    background: rgba(255, 255, 255, 0.1);
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.round-detail h3 {
+    margin: 0 0 10px 0;
+    color: #ffd700;
+}
+
+.round-detail p {
+    margin: 5px 0;
+    color: #fff;
+}
+
+.forge-title {
+    font-size: 2.5em;
+    color: #ffd700;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+#statsView {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+#nameEntry {
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+}
+
+#nameEntry input {
+    padding: 8px;
+    margin: 10px 5px;
+    font-size: 1.1em;
+    width: 200px;
+}
+
+#statsView .backMenu {
+    margin-bottom: 20px;
+}
+
+.grace-countdown {
+    color: #4CAF50;
+    font-size: 1.2em;
+    margin: 10px 0;
+    font-weight: bold;
 }
