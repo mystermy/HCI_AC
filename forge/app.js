@@ -67,6 +67,7 @@ function showView(view) {
   overlay.classList.add('hidden');
   view.classList.remove('hidden');
   document.body.className = '';
+  sessionView.classList.remove('forge-background', 'cooling-background');
   forgeImageWrapper.classList.add('hidden');
   coolingImageWrapper.classList.add('hidden');
   overlayImageWrapper.classList.add('hidden');
@@ -100,6 +101,8 @@ function startStudy() {
   document.body.classList.remove('mist');
   document.body.classList.remove('cooling-background');
   document.body.classList.add('forge-background');
+  sessionView.classList.remove('cooling-background');
+  sessionView.classList.add('forge-background');
   forgeImageWrapper.classList.remove('hidden');
   coolingImageWrapper.classList.add('hidden');
   requestFullscreen(sessionView);
@@ -142,10 +145,12 @@ function leaveStudy() {
 // REST PHASE LOGIC
 function startRest() {
   document.body.classList.remove('forge-background');
+  sessionView.classList.remove('forge-background');
   forgeImageWrapper.classList.add('hidden');
   coolingImageWrapper.classList.remove('hidden');
   document.body.classList.remove('mist');
   document.body.classList.add('cooling-background');
+  sessionView.classList.add('cooling-background');
   phaseHeader.textContent = `Resting — Round ${currentRound} of ${rounds}`;
   leaveForgeBtn.classList.add('hidden');
   restRemaining = restDuration;
@@ -215,13 +220,19 @@ function showTransition(text, btnText, onConfirm, imgSrc = null, overlayClass = 
 
 function overheated() {
   exitFullscreen();
-  showTransition('The sword is overheated! Temper within 30s', 'Temper the Sword', () => {
-    if (currentRound >= rounds) {
-      endSession(true);
-    } else {
-      startRest();
-    }
-  });
+  showTransition(
+    'The sword is overheated! Temper within 30s',
+    'Temper the Sword',
+    () => {
+      if (currentRound >= rounds) {
+        endSession(true);
+      } else {
+        startRest();
+      }
+    },
+    '../sword_burning.png',
+    'burning-glow'
+  );
 }
 
 function startCoolDown() {
