@@ -25,6 +25,9 @@ const statsEl = document.getElementById('stats');
 const nameEntry = document.getElementById('nameEntry');
 const bladeNameInput = document.getElementById('bladeName');
 const forgeImageWrapper = document.getElementById('forgeImageWrapper');
+const coolingImageWrapper = document.getElementById('coolingImageWrapper');
+const overlayImageWrapper = document.getElementById('overlayImageWrapper');
+const overlayImage = document.getElementById('overlayImage');
 
 // FORM HANDLERS
 startForgeBtn.addEventListener('click', () => showView(formView));
@@ -65,6 +68,8 @@ function showView(view) {
   view.classList.remove('hidden');
   document.body.className = '';
   forgeImageWrapper.classList.add('hidden');
+  coolingImageWrapper.classList.add('hidden');
+  overlayImageWrapper.classList.add('hidden');
   clearInterval(phaseTimer);
   phaseTimer = null;
   clearInterval(transitionTimer);
@@ -93,8 +98,10 @@ function startStudy() {
   phaseHeader.textContent = `Studying — Round ${currentRound} of ${rounds}`;
   leaveForgeBtn.classList.remove('hidden');
   document.body.classList.remove('mist');
+  document.body.classList.remove('cooling-background');
   document.body.classList.add('forge-background');
   forgeImageWrapper.classList.remove('hidden');
+  coolingImageWrapper.classList.add('hidden');
   requestFullscreen(sessionView);
   if (studyRemaining <= 0) studyRemaining = studyDuration;
   timerDisplay.textContent = format(studyRemaining);
@@ -119,10 +126,16 @@ function leaveStudy() {
   if (currentRound >= rounds && studyRemaining <= 0) {
     endSession(true);
   } else {
-    showTransition('Leave full-screen within 30s or forging fails!', 'Return to Forge', () => {
-      requestFullscreen(sessionView);
-      startStudy();
-    });
+    showTransition(
+      'Leave full-screen within 30s or forging fails!',
+      'Return to Forge',
+      () => {
+        requestFullscreen(sessionView);
+        startStudy();
+      },
+      '../sword_burning.png',
+      'burning-glow'
+    );
   }
 }
 
@@ -130,7 +143,9 @@ function leaveStudy() {
 function startRest() {
   document.body.classList.remove('forge-background');
   forgeImageWrapper.classList.add('hidden');
-  document.body.classList.add('mist');
+  coolingImageWrapper.classList.remove('hidden');
+  document.body.classList.remove('mist');
+  document.body.classList.add('cooling-background');
   phaseHeader.textContent = `Resting — Round ${currentRound} of ${rounds}`;
   leaveForgeBtn.classList.add('hidden');
   restRemaining = restDuration;
@@ -143,11 +158,17 @@ function startRest() {
       clearInterval(phaseTimer);
       phaseTimer = null;
       if (currentRound < rounds) {
-        showTransition('Enter Forge within 30s', 'Enter Forge', () => {
-          currentRound++;
-          studyRemaining = studyDuration;
-          startStudy();
-        });
+        showTransition(
+          'Enter Forge within 30s',
+          'Enter Forge',
+          () => {
+            currentRound++;
+            studyRemaining = studyDuration;
+            startStudy();
+          },
+          '../sword_rusting.png',
+          'rusting-glow'
+        );
       } else {
         endSession(true);
       }
@@ -156,16 +177,25 @@ function startRest() {
 }
 
 // TRANSITION TIMERS
-function showTransition(text, btnText, onConfirm) {
+function showTransition(text, btnText, onConfirm, imgSrc = null, overlayClass = '') {
   let elapsed = 0;
   overlayHeader.textContent = text;
   overlayCountdown.textContent = 30;
   overlayBtn.textContent = btnText;
+  if (imgSrc) {
+    overlayImage.src = imgSrc;
+    overlayImageWrapper.classList.remove('hidden');
+  } else {
+    overlayImageWrapper.classList.add('hidden');
+  }
   overlay.classList.remove('hidden');
+  overlay.classList.remove('burning-glow', 'rusting-glow');
+  if (overlayClass) overlay.classList.add(overlayClass);
   overlayBtn.onclick = () => {
     clearInterval(transitionTimer);
     transitionTimer = null;
     overlay.classList.add('hidden');
+    overlay.classList.remove('burning-glow', 'rusting-glow');
     transitionDurations.push(elapsed);
     onConfirm();
   };
@@ -176,6 +206,7 @@ function showTransition(text, btnText, onConfirm) {
       clearInterval(transitionTimer);
       transitionTimer = null;
       overlay.classList.add('hidden');
+      overlay.classList.remove('burning-glow', 'rusting-glow');
       transitionDurations.push(30);
       endSession(false);
     }
@@ -211,11 +242,17 @@ function startRestTimer() {
       clearInterval(phaseTimer);
       phaseTimer = null;
       if (currentRound < rounds) {
-        showTransition('Enter Forge within 30s', 'Enter Forge', () => {
-          currentRound++;
-          studyRemaining = studyDuration;
-          startStudy();
-        });
+        showTransition(
+          'Enter Forge within 30s',
+          'Enter Forge',
+          () => {
+            currentRound++;
+            studyRemaining = studyDuration;
+            startStudy();
+          },
+          '../sword_rusting.png',
+          'rusting-glow'
+        );
       } else {
         endSession(true);
       }
