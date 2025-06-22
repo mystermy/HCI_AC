@@ -314,9 +314,9 @@ function endSession(success) {
 
   if (!success) outcome = 'Blade Broke';
   statsEl.innerHTML = `
+    <p>Outcome: ${outcome}</p>`;
     <p>Total seconds out of full-screen during Studying Phases: ${transitionDurations.filter((_, index) => index % 2 === 0).join(', ')}</p>
     <p>Total seconds inside full-screen during Rest Phases: ${transitionDurations.filter((_, index) => index % 2 !== 0).join(', ')}</p>
-    <p>Outcome: ${outcome}</p>`;
   if (success) {
     nameEntry.classList.remove('hidden');
     brokenIcon.classList.add('hidden');
