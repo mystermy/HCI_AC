@@ -104,7 +104,7 @@ let ignoreFsChange = false;
 
 // STUDY PHASE LOGIC
 function startStudy() {
-  phaseHeader.textContent = `Studying — Round ${currentRound} of ${rounds}`;
+  phaseHeader.textContent = `Studying \n Round ${currentRound} of ${rounds}`;
   leaveForgeBtn.classList.remove('hidden');
   document.body.classList.remove('mist');
   document.body.classList.remove('cooling-background');
@@ -138,7 +138,7 @@ function leaveStudy() {
     endSession(true);
   } else {
     showTransition(
-      'Leave full-screen within 30s or forging fails!',
+      'The Sword is Breaking Down',
       'Return to Forge',
       () => {
         requestFullscreen(sessionView);
@@ -230,7 +230,7 @@ function overheated() {
   exitFullscreen();
   showTransition(
     'The sword is overheating!',
-    'Go Back',
+    'Cool Down',
     () => {
       if (currentRound >= rounds) {
         endSession(true);
