@@ -267,3 +267,32 @@ button {
     margin: 10px 0;
     font-weight: bold;
 }
+
+.player-stats {
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 600px;
+    text-align: center;
+}
+
+.player-name {
+    font-size: 2em;
+    color: #ffd700;
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.player-rank {
+    font-size: 1.4em;
+    color: #4CAF50;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+#bladeList h2 {
+    color: #ffd700;
+    margin: 30px 0 20px 0;
+    text-align: center;
+}

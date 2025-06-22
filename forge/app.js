@@ -96,7 +96,9 @@ saveBladeBtn.addEventListener('click', () => {
         forgedBlades.push({
             name,
             userName: currentUserName,
-            transitions: transitionDurations.slice()
+            transitions: transitionDurations.slice(),
+            studyDuration: studyDuration,
+            rounds: rounds
         });
         bladeNameInput.value = '';
     }
@@ -410,25 +412,82 @@ function endSession(success) {
   showView(statsView);
 }
 
-function renderBladeList() {
-    bladeListEl.innerHTML = '';
-    forgedBlades.forEach(blade => {
-        const li = document.createElement('li');
-        const bladeInfo = document.createElement('div');
-        bladeInfo.className = 'blade-info';
+function calculatePlayerRank(blades) {
+    let totalScore = 0;
+    blades.forEach(blade => {
+        const studyMinutes = blade.studyDuration / 60;
+        const numSessions = blade.rounds;
+        const baseScore = 100 * studyMinutes;
 
-        bladeInfo.innerHTML = `
-            <img src="../sword_icon.png" alt="sword icon" class="list-icon">
-            <div class="blade-details">
-                <span class="blade-name">${blade.name}</span>
-                <span class="blade-creator">Forged by: ${blade.userName}</span>
-                <span class="blade-stats">Transitions: [${blade.transitions.join(', ')}]</span>
-            </div>
+        // Calculate deduction rate: baseScore / (transitionLimit * rounds)
+        // This gives us how many points to deduct per second
+        const deductionRate = baseScore / (blade.transitionLimit * numSessions);
+
+        // Process each round's transitions
+        for (let i = 0; i < blade.transitions.length; i++) {
+            const transitionTime = blade.transitions[i];
+
+            // Calculate points for this round
+            let roundScore = baseScore;
+
+            // For each second in transition after grace period, deduct points based on rate
+            if (transitionTime > 0) {
+                roundScore -= (transitionTime * deductionRate);
+            }
+
+            totalScore += roundScore;
+        }
+    });
+    return Math.round(totalScore);
+}
+
+function renderBladeList() {
+    const playerStatsEl = document.getElementById('playerStats');
+    bladeListEl.innerHTML = '';
+
+    // Group blades by player
+    const playerBlades = {};
+    forgedBlades.forEach(blade => {
+        if (!playerBlades[blade.userName]) {
+            playerBlades[blade.userName] = [];
+        }
+        playerBlades[blade.userName].push(blade);
+    });
+
+    // Show current player's stats
+    if (playerBlades[currentUserName]) {
+        const rank = calculatePlayerRank(playerBlades[currentUserName]);
+        playerStatsEl.innerHTML = `
+            <div class="player-name">${currentUserName}</div>
+            <div class="player-rank">Rank: ${rank}</div>
         `;
 
-        li.appendChild(bladeInfo);
-        bladeListEl.appendChild(li);
-    });
+        // Show current player's blades
+        const blades = playerBlades[currentUserName];
+        bladeListEl.innerHTML = '<h2>Your Forged Blades</h2>';
+        blades.forEach(blade => {
+            const li = document.createElement('li');
+            const bladeInfo = document.createElement('div');
+            bladeInfo.className = 'blade-info';
+
+            bladeInfo.innerHTML = `
+                <img src="../sword_icon.png" alt="sword icon" class="list-icon">
+                <div class="blade-details">
+                    <span class="blade-name">${blade.name}</span>
+                    <span class="blade-stats">Study Duration: ${blade.studyDuration/60} minutes, ${blade.rounds} rounds</span>
+                    <span class="blade-stats">Transitions: [${blade.transitions.join(', ')}]</span>
+                </div>
+            `;
+
+            li.appendChild(bladeInfo);
+            bladeListEl.appendChild(li);
+        });
+    } else {
+        playerStatsEl.innerHTML = `
+            <div class="player-name">${currentUserName}</div>
+            <div class="player-rank">No swords forged yet</div>
+        `;
+    }
 }
 
 function format(s) {
