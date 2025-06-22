@@ -28,8 +28,6 @@ const bladeListEl = document.getElementById('bladeList');
 const statsEl = document.getElementById('stats');
 const nameEntry = document.getElementById('nameEntry');
 const bladeNameInput = document.getElementById('bladeName');
-const playerNameInput = document.getElementById('playerName');
-const listTitle = document.getElementById('listTitle');
 const forgeImageWrapper = document.getElementById('forgeImageWrapper');
 const coolingImageWrapper = document.getElementById('coolingImageWrapper');
 const overlayImageWrapper = document.getElementById('overlayImageWrapper');
@@ -64,10 +62,9 @@ beginSessionBtn.addEventListener('click', () => {
 backButtons.forEach(btn => btn.addEventListener('click', () => showView(menu)));
 
 saveBladeBtn.addEventListener('click', () => {
-  const bladeName = bladeNameInput.value.trim();
-  const player = playerNameInput.value.trim() || 'Unknown';
-  if (bladeName) {
-    forgedBlades.push({ bladeName, player, transitions: transitionDurations.slice() });
+  const name = bladeNameInput.value.trim();
+  if (name) {
+    forgedBlades.push({ name, transitions: transitionDurations.slice() });
     bladeNameInput.value = '';
   }
   showView(menu);
@@ -107,7 +104,7 @@ let ignoreFsChange = false;
 
 // STUDY PHASE LOGIC
 function startStudy() {
-  phaseHeader.textContent = `Studying \n Round ${currentRound} of ${rounds}`;
+  phaseHeader.textContent = `Studying — Round ${currentRound} of ${rounds}`;
   leaveForgeBtn.classList.remove('hidden');
   document.body.classList.remove('mist');
   document.body.classList.remove('cooling-background');
@@ -141,14 +138,14 @@ function leaveStudy() {
     endSession(true);
   } else {
     showTransition(
-      'The Sword is Breaking Down',
-      'Return to Forge',
-      () => {
-        requestFullscreen(sessionView);
-        startStudy();
-      },
-      '../sword_burning.png',
-      'burning-glow'
+        'Leave full-screen within 30s or forging fails!',
+        'Return to Forge',
+        () => {
+          requestFullscreen(sessionView);
+          startStudy();
+        },
+        '../sword_burning.png',
+        'burning-glow'
     );
   }
 }
@@ -175,15 +172,15 @@ function startRest() {
       phaseTimer = null;
       if (currentRound < rounds) {
         showTransition(
-          'Sword is Rusting',
-          'Back to Forge',
-          () => {
-            currentRound++;
-            studyRemaining = studyDuration;
-            startStudy();
-          },
-          '../sword_rusting.png',
-          'rusting-glow'
+            'Sword is Rusting',
+            'Back to Forge',
+            () => {
+              currentRound++;
+              studyRemaining = studyDuration;
+              startStudy();
+            },
+            '../sword_rusting.png',
+            'rusting-glow'
         );
       } else {
         endSession(true);
@@ -232,17 +229,17 @@ function showTransition(text, btnText, onConfirm, imgSrc = null, overlayClass = 
 function overheated() {
   exitFullscreen();
   showTransition(
-    'The sword is overheating!',
-    'Cool Down',
-    () => {
-      if (currentRound >= rounds) {
-        endSession(true);
-      } else {
-        startRest();
-      }
-    },
-    '../sword_burning.png',
-    'burning-glow'
+      'The sword is overheating!',
+      'Go Back',
+      () => {
+        if (currentRound >= rounds) {
+          endSession(true);
+        } else {
+          startRest();
+        }
+      },
+      '../sword_burning.png',
+      'burning-glow'
   );
 }
 
@@ -265,15 +262,15 @@ function startRestTimer() {
       phaseTimer = null;
       if (currentRound < rounds) {
         showTransition(
-          'Sword Rusting',
-          'Enter Forge',
-          () => {
-            currentRound++;
-            studyRemaining = studyDuration;
-            startStudy();
-          },
-          '../sword_rusting.png',
-          'rusting-glow'
+            'Sword Rusting',
+            'Enter Forge',
+            () => {
+              currentRound++;
+              studyRemaining = studyDuration;
+              startStudy();
+            },
+            '../sword_rusting.png',
+            'rusting-glow'
         );
       } else {
         endSession(true);
@@ -317,9 +314,9 @@ function endSession(success) {
 
   if (!success) outcome = 'Blade Broke';
   statsEl.innerHTML = `
-    <p>Outcome: ${outcome}</p>`;
     <p>Total seconds out of full-screen during Studying Phases: ${transitionDurations.filter((_, index) => index % 2 === 0).join(', ')}</p>
     <p>Total seconds inside full-screen during Rest Phases: ${transitionDurations.filter((_, index) => index % 2 !== 0).join(', ')}</p>
+    <p>Outcome: ${outcome}</p>`;
   if (success) {
     nameEntry.classList.remove('hidden');
     brokenIcon.classList.add('hidden');
@@ -332,14 +329,9 @@ function endSession(success) {
 
 function renderBladeList() {
   bladeListEl.innerHTML = '';
-  const player = playerNameInput.value.trim() || 'Unknown';
-  if (listTitle) {
-    listTitle.textContent = `Forged Swords - ${player}`;
-  }
   forgedBlades.forEach(blade => {
     const li = document.createElement('li');
-    const displayPlayer = blade.player || player;
-    li.innerHTML = `<img src="../sword_icon.png" alt="sword icon" class="list-icon"> ${blade.bladeName} - ${displayPlayer} - [${blade.transitions.join(', ')}]`;
+    li.innerHTML = `<img src="../sword_icon.png" alt="sword icon" class="list-icon"> ${blade.name} - [${blade.transitions.join(', ')}]`;
     bladeListEl.appendChild(li);
   });
 }
