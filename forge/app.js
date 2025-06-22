@@ -98,7 +98,8 @@ saveBladeBtn.addEventListener('click', () => {
             userName: currentUserName,
             transitions: transitionDurations.slice(),
             studyDuration: studyDuration,
-            rounds: rounds
+            rounds: rounds,
+            transitionLimit: transitionLimit
         });
         bladeNameInput.value = '';
     }
@@ -403,7 +404,7 @@ function endSession(success) {
   const scoreColor = scoreChange >= 0 ? '#4CAF50' : '#FF5252';
   let statsHtml = `<p class="score-change" style="color: ${scoreColor}; font-size: 1.5em; font-weight: bold;">
       Score: ${scoreChange >= 0 ? '+' : ''}${scoreChange}</p>
-      <p style="font-size: 1.2em; margin-top: 10px; color: #00bfff;">Sword Strength: ${Math.round(percentage)}%</p>`;
+      <p style="font-size: 1.2em; margin-top: 10px; color: #00bfff;">Sword Quality: ${Math.round(percentage)}%</p>`;
 
   statsHtml += `<p>Outcome: ${outcome}</p><div class="round-stats">`;
 
@@ -484,15 +485,43 @@ function renderBladeList() {
     // Show current player's stats
     if (playerBlades[currentUserName]) {
         const rank = calculatePlayerRank(playerBlades[currentUserName]);
+
+        // Analyze all transitions to find the longest and its type
+        let longestTransition = 0;
+        let isForgeTransition = true; // true for forge transitions, false for rest transitions
+
+        playerBlades[currentUserName].forEach(blade => {
+            blade.transitions.forEach((time, index) => {
+                if (time > longestTransition) {
+                    longestTransition = time;
+                    // Even indices are forge transitions, odd are rest transitions
+                    isForgeTransition = (index % 2 === 0);
+                }
+            });
+        });
+
+        // Create improvement suggestion based on longest transition
+        let improvementMsg = '';
+        if (longestTransition > 0) {
+            improvementMsg = `<div style="color: #FFA500; margin-top: 10px;">
+                Suggestion: Try to reduce your ${isForgeTransition ? 'study' : 'rest'} transition times
+                (current longest: ${longestTransition}s)
+            </div>`;
+        }
+
         playerStatsEl.innerHTML = `
             <div class="player-name">${currentUserName}</div>
-            <div class="player-rank">Rank: ${rank.totalScore}</div>
+            <div class="player-rank">Total Score: ${rank.totalScore}</div>
+            ${improvementMsg}
         `;
 
         // Show current player's blades
         const blades = playerBlades[currentUserName];
         bladeListEl.innerHTML = '<h2>Your Forged Blades</h2>';
         blades.forEach(blade => {
+            // Add missing transitionLimit to blade for score calculation
+            blade.transitionLimit = 30 + Math.ceil(blade.studyDuration / 60);
+
             const singleBladeRank = calculatePlayerRank([blade]);
             const scoreChange = singleBladeRank.lastSessionScore;
             const maxPossiblePoints = 100 * (blade.studyDuration / 60);
@@ -514,7 +543,7 @@ function renderBladeList() {
                             Score: ${scoreChange >= 0 ? '+' : ''}${scoreChange}
                         </span>
                         <span style="color: #00bfff; margin-left: 10px;">
-                            Strength: ${Math.round(percentage)}%
+                            Quality: ${Math.round(percentage)}%
                         </span>
                     </div>
                 </div>
