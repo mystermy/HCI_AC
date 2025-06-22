@@ -24,6 +24,7 @@ const bladeListEl = document.getElementById('bladeList');
 const statsEl = document.getElementById('stats');
 const nameEntry = document.getElementById('nameEntry');
 const bladeNameInput = document.getElementById('bladeName');
+const forgeImageWrapper = document.getElementById('forgeImageWrapper');
 
 // FORM HANDLERS
 startForgeBtn.addEventListener('click', () => showView(formView));
@@ -63,6 +64,7 @@ function showView(view) {
   overlay.classList.add('hidden');
   view.classList.remove('hidden');
   document.body.className = '';
+  forgeImageWrapper.classList.add('hidden');
   clearInterval(phaseTimer);
   phaseTimer = null;
   clearInterval(transitionTimer);
@@ -90,7 +92,9 @@ let ignoreFsChange = false;
 function startStudy() {
   phaseHeader.textContent = `Studying — Round ${currentRound} of ${rounds}`;
   leaveForgeBtn.classList.remove('hidden');
+  document.body.classList.remove('mist');
   document.body.classList.add('forge-background');
+  forgeImageWrapper.classList.remove('hidden');
   requestFullscreen(sessionView);
   if (studyRemaining <= 0) studyRemaining = studyDuration;
   timerDisplay.textContent = format(studyRemaining);
@@ -124,6 +128,8 @@ function leaveStudy() {
 
 // REST PHASE LOGIC
 function startRest() {
+  document.body.classList.remove('forge-background');
+  forgeImageWrapper.classList.add('hidden');
   document.body.classList.add('mist');
   phaseHeader.textContent = `Resting — Round ${currentRound} of ${rounds}`;
   leaveForgeBtn.classList.add('hidden');
