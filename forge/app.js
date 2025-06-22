@@ -90,7 +90,9 @@ beginSessionBtn.addEventListener('click', () => {
     currentRound = 1;
     studyRemaining = studyDuration;
     restRemaining = restDuration;
-    transitionDurations = [];
+    burningTransitions = [];
+    meltingTransitions = [];
+    rustingTransitions = [];
     outOfFull = 0;
     inFullDuringRest = 0;
     outcome = 'Blade Forged';
@@ -103,13 +105,74 @@ backButtons.forEach(btn => btn.addEventListener('click', () => showView(menu)));
 saveBladeBtn.addEventListener('click', () => {
     const name = bladeNameInput.value.trim();
     if (name) {
+        // Generate improvement message
+        let improvementMsg = '';
+
+        // Calculate total transitions for each type
+        let totalBurning = burningTransitions.reduce((sum, time) => sum + (time || 0), 0);
+        let totalMelting = meltingTransitions.reduce((sum, time) => sum + (time || 0), 0);
+        let totalRusting = rustingTransitions.reduce((sum, time) => sum + (time || 0), 0);
+
+        // Find the most problematic transition type
+        const maxTransition = Math.max(totalBurning, totalMelting, totalRusting);
+        let problemArea = '';
+
+        if (maxTransition > 0) {
+            if (maxTransition === totalBurning) {
+                problemArea = 'maintaining focus during study';
+            } else if (maxTransition === totalMelting) {
+                problemArea = 'managing study time';
+            } else {
+                problemArea = 'managing break time';
+            }
+
+            if (selectedMode === 'personalised') {
+                const avgTransition = Math.round(maxTransition / rounds);
+                let tipText = '';
+
+                if (maxTransition === totalBurning) {
+                    tipText = 'Try to eliminate distractions before starting your study session';
+                } else if (maxTransition === totalMelting) {
+                    tipText = 'Set a timer to help you track your study duration';
+                } else {
+                    tipText = 'Set an alarm for your break time to avoid over-extending';
+                }
+
+                improvementMsg = {
+                    type: 'personalised',
+                    focusArea: `${problemArea} (avg. ${avgTransition}s lost)`,
+                    tip: tipText
+                };
+            } else if (selectedMode === 'random') {
+                const randomTips = [
+                    'Try studying in a quiet environment to maintain better focus',
+                    'Take short breaks between study sessions to stay refreshed',
+                    'Use a timer to track your study and break periods',
+                    'Remove distractions like phones before starting',
+                    'Stay hydrated during your study sessions',
+                    'Make sure your study area is well-lit and comfortable',
+                    'Try the Pomodoro technique: 25 minutes of study, 5 minutes break',
+                    'Review your material briefly before starting a session'
+                ];
+                const randomTip = randomTips[Math.floor(Math.random() * randomTips.length)];
+                improvementMsg = {
+                    type: 'random',
+                    tip: randomTip
+                };
+            }
+        }
+
         forgedBlades.push({
             name,
             userName: currentUserName,
-            transitions: transitionDurations.slice(),
+            burning: burningTransitions.slice(),
+            melting: meltingTransitions.slice(),
+            rusting: rustingTransitions.slice(),
             studyDuration: studyDuration,
+            restDuration: restDuration,
             rounds: rounds,
-            transitionLimit: transitionLimit
+            transitionLimit: transitionLimit,
+            improvementMsg: improvementMsg
         });
         bladeNameInput.value = '';
     }
@@ -148,7 +211,9 @@ let restDuration = 0;
 let currentRound = 1;
 let studyRemaining = 0;
 let restRemaining = 0;
-let transitionDurations = [];
+let burningTransitions = [];
+let meltingTransitions = [];
+let rustingTransitions = [];
 let transitionTimer = null;
 let phaseTimer = null;
 let outOfFull = 0;
@@ -196,9 +261,11 @@ function leaveStudy() {
     endSession(true);
   } else {
     showTransition(
-        'The sword is not being watched, it might break!',
+        'The sword is burning! Return quickly!',
         'Return to Forge',
-        () => {
+        (effectiveTime) => {
+          // This is a burning transition (manual leave)
+          burningTransitions[currentRound - 1] = effectiveTime;
           requestFullscreen(sessionView);
           startStudy();
         },
@@ -232,7 +299,9 @@ function startRest() {
         showTransition(
             'Sword is Rusting',
             'Back to Forge',
-            () => {
+            (effectiveTime) => {
+              // Record rusting transition
+              rustingTransitions[currentRound - 1] = effectiveTime;
               currentRound++;
               studyRemaining = studyDuration;
               startStudy();
@@ -250,7 +319,8 @@ function startRest() {
 // TRANSITION TIMERS
 function showTransition(text, btnText, onConfirm, imgSrc = null, overlayClass = '') {
   let elapsed = 0;
-  let gracePeriod = true;
+  let effectiveTime = 0;  // Track actual countable time
+  let countingStarted = false;  // Flag to track when to start counting
   const graceCountdownEl = document.getElementById('graceCountdown');
 
   overlayHeader.textContent = text;
@@ -277,34 +347,37 @@ function showTransition(text, btnText, onConfirm, imgSrc = null, overlayClass = 
     transitionTimer = null;
     overlay.classList.add('hidden');
     overlay.classList.remove('burning-glow', 'rusting-glow');
-    // Only count the time after grace period
-    const countedTime = Math.max(0, elapsed - gracePeriodDuration);
-    transitionDurations.push(countedTime);
-    onConfirm();
+    // Pass the current effective time when button is clicked
+    onConfirm(effectiveTime);
   };
 
   transitionTimer = setInterval(() => {
     elapsed++;
 
-    // Update the grace period countdown if we're still in grace period
+    // Show grace period countdown until it ends
     if (elapsed <= gracePeriodDuration) {
       graceCountdownEl.textContent = `Grace Period: ${gracePeriodDuration - elapsed}s`;
     } else if (elapsed === gracePeriodDuration + 1) {
+      // Grace period just ended
       graceCountdownEl.textContent = 'Grace Period Ended!';
       overlayHeader.textContent = text + "\nTransitions now count!";
+      countingStarted = true;  // Start counting only when this message appears
+      effectiveTime = 0;  // Reset counter at this point
+    } else if (countingStarted) {
+      // Only increment if we're past grace and counting has started
+      effectiveTime++;
     }
 
-    // Update the main countdown (showing remaining time excluding grace period)
-    overlayCountdown.textContent = transitionLimit - Math.max(0, elapsed - gracePeriodDuration);
+    // Update the main countdown showing effective time
+    overlayCountdown.textContent = Math.max(0, transitionLimit - effectiveTime);
 
-
-    if (elapsed >= transitionLimit + gracePeriodDuration) {
+    // Auto-confirm if limit reached
+    if (effectiveTime >= transitionLimit) {
       clearInterval(transitionTimer);
       transitionTimer = null;
       overlay.classList.add('hidden');
       overlay.classList.remove('burning-glow', 'rusting-glow');
-      transitionDurations.push(transitionLimit);
-      endSession(false);
+      onConfirm(transitionLimit);
     }
   }, 1000);
 }
@@ -312,9 +385,12 @@ function showTransition(text, btnText, onConfirm, imgSrc = null, overlayClass = 
 function overheated() {
   exitFullscreen();
   showTransition(
-      'The sword is overheating!',
+      'The sword is melting! It was in the forge too long!',
       'Cool it Down',
-      () => {
+      (effectiveTime) => {
+        // This is a melting transition (study timer expired)
+        meltingTransitions[currentRound - 1] = effectiveTime;
+
         if (currentRound >= rounds) {
           endSession(true);
         } else {
@@ -329,10 +405,18 @@ function overheated() {
 function startCoolDown() {
   clearInterval(phaseTimer);
   phaseTimer = null;
-  showTransition('Sword is burning!', 'Cool it Down', () => {
-    exitFullscreen();
-    startRestTimer();
-  });
+  showTransition(
+    'Sword is rusting!',
+    'Cool it Down',
+    (effectiveTime) => {
+      // Use the effective time (after grace period)
+      transitionDurations.push(effectiveTime);
+      exitFullscreen();
+      startRestTimer();
+    },
+    '../sword_rusting.png',
+    'rusting-glow'
+  );
 }
 
 function startRestTimer() {
@@ -403,47 +487,51 @@ function endSession(success) {
   // Calculate score for this session
   const tempBlade = {
     userName: currentUserName,
-    transitions: transitionDurations.slice(),
+    burning: burningTransitions.slice(),
+    melting: meltingTransitions.slice(),
+    rusting: rustingTransitions.slice(),
     studyDuration: studyDuration,
     rounds: rounds,
     transitionLimit: transitionLimit
   };
-  const scoreResult = calculatePlayerRank([tempBlade]);
-  const scoreChange = scoreResult.lastSessionScore;
 
-  // Calculate maximum possible points (base score with no deductions)
+  // Calculate deductions based on all transition types
   const studyMinutes = studyDuration / 60;
-  const maxPossiblePoints = 100 * studyMinutes;
+  const baseScore = 100 * studyMinutes;
+  const deductionRate = (baseScore / (transitionLimit * rounds)) * 2;
 
-  // Calculate percentage: 100% at max points, 50% at 0 points, 0% at -max points or lower
+  let scoreChange = baseScore;
+
+  // Apply deductions for each type of transition
+  for (let i = 0; i < rounds; i++) {
+    if (burningTransitions[i]) scoreChange -= (burningTransitions[i] * deductionRate);
+    if (meltingTransitions[i]) scoreChange -= (meltingTransitions[i] * deductionRate);
+    if (rustingTransitions[i]) scoreChange -= (rustingTransitions[i] * deductionRate);
+  }
+
+  // Calculate maximum possible points and percentage
+  const maxPossiblePoints = baseScore;
   let percentage = 50 + ((scoreChange / maxPossiblePoints) * 50);
-  percentage = Math.max(0, Math.min(100, percentage)); // Clamp between 0 and 100
+  percentage = Math.max(0, Math.min(100, percentage));
 
   // Create score display with color
   const scoreColor = scoreChange >= 0 ? '#4CAF50' : '#FF5252';
   let statsHtml = `<p class="score-change" style="color: ${scoreColor}; font-size: 1.5em; font-weight: bold;">
-      Score: ${scoreChange >= 0 ? '+' : ''}${scoreChange}</p>
+      Score: ${scoreChange >= 0 ? '+' : ''}${Math.round(scoreChange)}</p>
       <p style="font-size: 1.2em; margin-top: 10px; color: #00bfff;">Sword Quality: ${Math.round(percentage)}%</p>`;
 
-  statsHtml += `<p>Outcome: ${outcome}</p><div class="round-stats">`;
+  statsHtml += `<p>Outcome: ${outcome}</p>
+        <p>Study Duration: ${studyDuration / 60} minutes</p>
+        <p>Rest Duration: ${restDuration / 60} minutes</p>
+        <div class="round-stats">`;
 
-  // ...existing code for round-by-round breakdown...
   for (let round = 0; round < rounds; round++) {
-    const studyTransition = transitionDurations[round * 2];
-    const restTransition = transitionDurations[round * 2 + 1];
-
     statsHtml += `<div class="round-detail">
-      <h3>Round ${round + 1}</h3>`;
-
-    if (studyTransition !== undefined) {
-      statsHtml += `<p>Sword was not watched for ${studyTransition} seconds</p>`;
-    }
-
-    if (restTransition !== undefined) {
-      statsHtml += `<p>Sword was burning for ${restTransition} seconds</p>`;
-    }
-
-    statsHtml += `</div>`;
+        <h3>Round ${round + 1}</h3>
+        <p>Left forge (burning): ${burningTransitions[round] || 0} seconds</p>
+        <p>Study time exceeded (melting): ${meltingTransitions[round] || 0} seconds</p>
+        <p>Rest phase (rusting): ${rustingTransitions[round] || 0} seconds</p>
+    </div>`;
   }
 
   statsHtml += '</div>';
@@ -505,49 +593,55 @@ function renderBladeList() {
     if (playerBlades[currentUserName]) {
         const rank = calculatePlayerRank(playerBlades[currentUserName]);
 
-        // Analyze all transitions to find the longest and its type
-        let longestTransition = 0;
-        let isForgeTransition = true;
-        let totalStudyTransitions = 0;
-        let totalRestTransitions = 0;
-        let studyTransitionCount = 0;
-        let restTransitionCount = 0;
+        // Analyze transitions for improvement suggestions
+        let totalBurning = 0;
+        let totalMelting = 0;
+        let totalRusting = 0;
+        let totalRounds = 0;
 
         playerBlades[currentUserName].forEach(blade => {
-            blade.transitions.forEach((time, index) => {
-                if (index % 2 === 0) {
-                    totalStudyTransitions += time;
-                    studyTransitionCount++;
-                } else {
-                    totalRestTransitions += time;
-                    restTransitionCount++;
-                }
-                if (time > longestTransition) {
-                    longestTransition = time;
-                    isForgeTransition = (index % 2 === 0);
-                }
-            });
+            if (blade.burning) {
+                blade.burning.forEach(time => totalBurning += (time || 0));
+                totalRounds += blade.rounds;
+            }
+            if (blade.melting) {
+                blade.melting.forEach(time => totalMelting += (time || 0));
+            }
+            if (blade.rusting) {
+                blade.rusting.forEach(time => totalRusting += (time || 0));
+            }
         });
 
-        // Calculate averages
-        const avgStudyTransition = studyTransitionCount > 0 ? Math.round(totalStudyTransitions / studyTransitionCount) : 0;
-        const avgRestTransition = restTransitionCount > 0 ? Math.round(totalRestTransitions / restTransitionCount) : 0;
+        const maxTransition = Math.max(totalBurning, totalMelting, totalRusting);
+        let problemArea = '';
+        let avgTransition = Math.round(maxTransition / totalRounds);
+
+        if (maxTransition > 0) {
+            if (maxTransition === totalBurning) {
+                problemArea = 'maintaining focus during study';
+            } else if (maxTransition === totalMelting) {
+                problemArea = 'managing study time';
+            } else {
+                problemArea = 'managing break time';
+            }
+        }
 
         // Create improvement suggestions based on mode
         let improvementMsg = '';
-        if (longestTransition > 0) {
+        if (maxTransition > 0) {
             if (selectedMode === 'personalised') {
-                const focusType = isForgeTransition ?
-                    `maintaining focus during study (avg. ${avgStudyTransition}s lost)` :
-                    `taking proper break length (avg. ${avgRestTransition}s over)`;
-
-                const tipText = isForgeTransition ?
-                    'Tip: Try to eliminate distractions before starting your study session' :
-                    'Tip: Set an alarm for your break time to avoid over-extending';
+                let tipText = '';
+                if (maxTransition === totalBurning) {
+                    tipText = 'Try to eliminate distractions before starting your study session';
+                } else if (maxTransition === totalMelting) {
+                    tipText = 'Set a timer to help you track your study duration';
+                } else {
+                    tipText = 'Set an alarm for your break time to avoid over-extending';
+                }
 
                 improvementMsg = `<div style="color: #FFA500; margin-top: 10px; text-align: left;">
                     <div style="font-size: 1.2em; color: #FFD700; margin-bottom: 15px;">Study Improvement Tips</div>
-                    <div style="margin-bottom: 10px;">Area to improve: ${focusType}</div>
+                    <div style="margin-bottom: 10px;">Area to improve: ${problemArea} (avg. ${avgTransition}s lost)</div>
                     <div style="font-size: 0.9em; color: #FFD700;">${tipText}</div>
                 </div>`;
             } else if (selectedMode === 'random') {
@@ -580,7 +674,6 @@ function renderBladeList() {
         const blades = playerBlades[currentUserName];
         bladeListEl.innerHTML = '<h2>Your Forged Blades</h2>';
         blades.forEach(blade => {
-            // Add missing transitionLimit to blade for score calculation
             blade.transitionLimit = 30 + Math.ceil(blade.studyDuration / 60);
 
             const singleBladeRank = calculatePlayerRank([blade]);
@@ -588,6 +681,21 @@ function renderBladeList() {
             const maxPossiblePoints = 100 * (blade.studyDuration / 60);
             let percentage = 50 + ((scoreChange / maxPossiblePoints) * 50);
             percentage = Math.max(0, Math.min(100, percentage));
+
+            // Format transitions to show all phases for each round
+            const formattedTransitions = [];
+            for (let round = 0; round < blade.rounds; round++) {
+                const burning = blade.burning ? blade.burning[round] || 0 : 0;
+                const melting = blade.melting ? blade.melting[round] || 0 : 0;
+                const rusting = blade.rusting ? blade.rusting[round] || 0 : 0;
+
+                let roundTransitions = `Round ${round + 1}: `;
+                roundTransitions += `Left forge (burning): ${burning}s`;
+                roundTransitions += `, Study time exceeded (melting): ${melting}s`;
+                roundTransitions += `, Rest phase (rusting): ${rusting}s`;
+
+                formattedTransitions.push(roundTransitions);
+            }
 
             const li = document.createElement('li');
             const bladeInfo = document.createElement('div');
@@ -598,7 +706,7 @@ function renderBladeList() {
                 <div class="blade-details">
                     <span class="blade-name">${blade.name}</span>
                     <span class="blade-stats">Study Duration: ${blade.studyDuration/60} minutes, ${blade.rounds} rounds</span>
-                    <span class="blade-stats">Transitions: [${blade.transitions.join(', ')}]</span>
+                    <span class="blade-stats">Transitions: [${formattedTransitions.join(', ')}]</span>
                     <div class="blade-stats">
                         <span style="color: ${scoreChange >= 0 ? '#4CAF50' : '#FF5252'}">
                             Score: ${scoreChange >= 0 ? '+' : ''}${scoreChange}
@@ -622,7 +730,6 @@ function renderBladeList() {
 }
 
 function generateResultsTable() {
-    // Get reference to the results view and preserve the back button if it exists
     const resultsView = document.getElementById('resultsView');
     const backButton = resultsView.querySelector('.backMenu');
 
@@ -637,10 +744,12 @@ function generateResultsTable() {
                         <th>Blade Name</th>
                         <th>Mode</th>
                         <th>Study Duration (min)</th>
+                        <th>Rest Duration (min)</th>
                         <th>Rounds</th>
                         <th>Score</th>
                         <th>Quality</th>
                         <th>Transitions</th>
+                        <th>Improvement Tips</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -649,11 +758,51 @@ function generateResultsTable() {
     // Add each blade's data
     forgedBlades.forEach(blade => {
         const studyMinutes = blade.studyDuration / 60;
-        const singleBladeRank = calculatePlayerRank([blade]);
-        const scoreChange = singleBladeRank.lastSessionScore;
-        const maxPossiblePoints = 100 * studyMinutes;
+        const restMinutes = blade.restDuration ? blade.restDuration / 60 : 5;
+
+        // Calculate score using all transition types
+        const baseScore = 100 * studyMinutes;
+        const deductionRate = (baseScore / (blade.transitionLimit * blade.rounds)) * 2;
+        let scoreChange = baseScore;
+
+        // Apply deductions for each type of transition
+        for (let i = 0; i < blade.rounds; i++) {
+            if (blade.burning && blade.burning[i]) scoreChange -= (blade.burning[i] * deductionRate);
+            if (blade.melting && blade.melting[i]) scoreChange -= (blade.melting[i] * deductionRate);
+            if (blade.rusting && blade.rusting[i]) scoreChange -= (blade.rusting[i] * deductionRate);
+        }
+
+        const maxPossiblePoints = baseScore;
         let percentage = 50 + ((scoreChange / maxPossiblePoints) * 50);
         percentage = Math.max(0, Math.min(100, percentage));
+
+        // Format transitions to show rounds clearly
+        const formattedTransitions = [];
+        for (let round = 0; round < blade.rounds; round++) {
+            const burning = blade.burning ? blade.burning[round] || 0 : 0;
+            const melting = blade.melting ? blade.melting[round] || 0 : 0;
+            const rusting = blade.rusting ? blade.rusting[round] || 0 : 0;
+
+            let roundTransitions = `Round ${round + 1}: `;
+            roundTransitions += `Left forge (burning): ${burning}s`;
+            roundTransitions += `, Study time exceeded (melting): ${melting}s`;
+            roundTransitions += `, Rest phase (rusting): ${rusting}s`;
+
+            formattedTransitions.push(roundTransitions);
+        }
+
+        // Format improvement message
+        let improvementContent = '';
+        if (blade.improvementMsg) {
+            if (blade.improvementMsg.type === 'personalised') {
+                improvementContent = `
+                    <div>Area to improve: ${blade.improvementMsg.focusArea}</div>
+                    <div>Tip: ${blade.improvementMsg.tip}</div>
+                `;
+            } else if (blade.improvementMsg.type === 'random') {
+                improvementContent = `<div>Tip: ${blade.improvementMsg.tip}</div>`;
+            }
+        }
 
         tableHTML += `
             <tr>
@@ -661,10 +810,12 @@ function generateResultsTable() {
                 <td>${blade.name}</td>
                 <td>${selectedMode}</td>
                 <td>${studyMinutes}</td>
+                <td>${restMinutes}</td>
                 <td>${blade.rounds}</td>
-                <td>${scoreChange}</td>
+                <td>${Math.round(scoreChange)}</td>
                 <td>${Math.round(percentage)}%</td>
-                <td>${blade.transitions.join(', ')}</td>
+                <td>${formattedTransitions.join('<br>')}</td>
+                <td>${improvementContent}</td>
             </tr>
         `;
     });
