@@ -177,7 +177,7 @@ function leaveStudy() {
     endSession(true);
   } else {
     showTransition(
-        'The sword is not being watched it might break!',
+        'The sword is not being watched, it might break!',
         'Return to Forge',
         () => {
           requestFullscreen(sessionView);
@@ -310,7 +310,7 @@ function overheated() {
 function startCoolDown() {
   clearInterval(phaseTimer);
   phaseTimer = null;
-  showTransition('Sword is burning', 'Cool it Down', () => {
+  showTransition('Sword is burning!', 'Cool it Down', () => {
     exitFullscreen();
     startRestTimer();
   });
@@ -488,24 +488,47 @@ function renderBladeList() {
 
         // Analyze all transitions to find the longest and its type
         let longestTransition = 0;
-        let isForgeTransition = true; // true for forge transitions, false for rest transitions
+        let isForgeTransition = true;
+        let totalStudyTransitions = 0;
+        let totalRestTransitions = 0;
+        let studyTransitionCount = 0;
+        let restTransitionCount = 0;
 
         playerBlades[currentUserName].forEach(blade => {
             blade.transitions.forEach((time, index) => {
+                if (index % 2 === 0) {
+                    totalStudyTransitions += time;
+                    studyTransitionCount++;
+                } else {
+                    totalRestTransitions += time;
+                    restTransitionCount++;
+                }
                 if (time > longestTransition) {
                     longestTransition = time;
-                    // Even indices are forge transitions, odd are rest transitions
                     isForgeTransition = (index % 2 === 0);
                 }
             });
         });
 
-        // Create improvement suggestion based on longest transition
+        // Calculate averages
+        const avgStudyTransition = studyTransitionCount > 0 ? Math.round(totalStudyTransitions / studyTransitionCount) : 0;
+        const avgRestTransition = restTransitionCount > 0 ? Math.round(totalRestTransitions / restTransitionCount) : 0;
+
+        // Create detailed improvement suggestions
         let improvementMsg = '';
         if (longestTransition > 0) {
-            improvementMsg = `<div style="color: #FFA500; margin-top: 10px;">
-                Suggestion: Try to reduce your ${isForgeTransition ? 'study' : 'rest'} transition times
-                (current longest: ${longestTransition}s)
+            const focusType = isForgeTransition ?
+                `maintaining focus during study (avg. ${avgStudyTransition}s lost)` :
+                `taking proper break length (avg. ${avgRestTransition}s over)`;
+
+            const tipText = isForgeTransition ?
+                'Tip: Try to eliminate distractions before starting your study session' :
+                'Tip: Set an alarm for your break time to avoid over-extending';
+
+            improvementMsg = `<div style="color: #FFA500; margin-top: 10px; text-align: left;">
+                <div style="font-size: 1.2em; color: #FFD700; margin-bottom: 15px;">Study Improvement Tips</div>
+                <div style="margin-bottom: 10px;">Area to improve: ${focusType}</div>
+                <div style="font-size: 0.9em; color: #FFD700;">${tipText}</div>
             </div>`;
         }
 
