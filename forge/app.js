@@ -1,10 +1,14 @@
 // MENU SETUP
+const modeMenu = document.getElementById('modeMenu');
 const menu = document.getElementById('menu');
 const formView = document.getElementById('formView');
 const sessionView = document.getElementById('sessionView');
 const listView = document.getElementById('listView');
 const statsView = document.getElementById('statsView');
 const overlay = document.getElementById('overlay');
+
+const randomModeBtn = document.getElementById('randomMode');
+const personalisedModeBtn = document.getElementById('personalisedMode');
 
 const startForgeBtn = document.getElementById('startForge');
 const showListBtn = document.getElementById('showList');
@@ -30,6 +34,9 @@ const overlayImageWrapper = document.getElementById('overlayImageWrapper');
 const overlayImage = document.getElementById('overlayImage');
 
 // FORM HANDLERS
+randomModeBtn.addEventListener('click', () => showView(menu));
+personalisedModeBtn.addEventListener('click', () => showView(menu));
+
 startForgeBtn.addEventListener('click', () => showView(formView));
 showListBtn.addEventListener('click', () => {
   renderBladeList();
@@ -321,7 +328,7 @@ function renderBladeList() {
   bladeListEl.innerHTML = '';
   forgedBlades.forEach(blade => {
     const li = document.createElement('li');
-    li.textContent = `${blade.name} - [${blade.transitions.join(', ')}]`;
+    li.innerHTML = `<img src="../sword_icon.png" alt="sword icon" class="list-icon"> ${blade.name} - [${blade.transitions.join(', ')}]`;
     bladeListEl.appendChild(li);
   });
 }
@@ -331,3 +338,6 @@ function format(s) {
   const sec = String(s % 60).padStart(2, '0');
   return `${m}:${sec}`;
 }
+
+// Start on the mode selection menu
+showView(modeMenu);
