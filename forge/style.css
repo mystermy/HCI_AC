@@ -4,7 +4,7 @@ body {
     padding: 0;
     text-align: center;
     background: #222;
-    color: #eee;
+    color: rgba(53, 71, 159, 0.22);
 }
 
 .view {
@@ -109,9 +109,9 @@ button {
 }
 
 @keyframes coolingGlow {
-    0% { background-color: rgba(34, 68, 102, 0.2); }
-    50% { background-color: rgba(51, 85, 119, 0.2); }
-    100% { background-color: rgba(34, 68, 102, 0.2); }
+    0% { background-color: rgba(11, 128, 239, 0.2); }
+    50% { background-color: rgba(4, 131, 255, 0.54); }
+    100% { background-color: rgba(35, 94, 155, 0.82); }
 }
 
 /* overlay glow effects */

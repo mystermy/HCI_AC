@@ -164,8 +164,8 @@ function startRest() {
       phaseTimer = null;
       if (currentRound < rounds) {
         showTransition(
-          'Enter Forge within 30s',
-          'Enter Forge',
+          'Sword is Rusting',
+          'Back to Forge',
           () => {
             currentRound++;
             studyRemaining = studyDuration;
@@ -221,8 +221,8 @@ function showTransition(text, btnText, onConfirm, imgSrc = null, overlayClass = 
 function overheated() {
   exitFullscreen();
   showTransition(
-    'The sword is overheated! Temper within 30s',
-    'Temper the Sword',
+    'The sword is overheating!',
+    'Go Back',
     () => {
       if (currentRound >= rounds) {
         endSession(true);
@@ -238,7 +238,7 @@ function overheated() {
 function startCoolDown() {
   clearInterval(phaseTimer);
   phaseTimer = null;
-  showTransition('Blade damage imminent! Cool within 30s', 'Cool it Down', () => {
+  showTransition('Sword is burning', 'Cool Down', () => {
     exitFullscreen();
     startRestTimer();
   });
@@ -254,7 +254,7 @@ function startRestTimer() {
       phaseTimer = null;
       if (currentRound < rounds) {
         showTransition(
-          'Enter Forge within 30s',
+          'Sword Rusting',
           'Enter Forge',
           () => {
             currentRound++;
@@ -304,7 +304,7 @@ function endSession(success) {
   console.log('outOfFull:', outOfFull);
   console.log('inFullDuringRest:', inFullDuringRest);
 
-  if (!success) outcome = 'Blade Broken';
+  if (!success) outcome = 'Blade Broke';
   statsEl.innerHTML = `
     <p>Total seconds out of full-screen during Studying Phases: ${transitionDurations.filter((_, index) => index % 2 === 0).join(', ')}</p>
     <p>Total seconds inside full-screen during Rest Phases: ${transitionDurations.filter((_, index) => index % 2 !== 0).join(', ')}</p>
