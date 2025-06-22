@@ -32,6 +32,7 @@ const forgeImageWrapper = document.getElementById('forgeImageWrapper');
 const coolingImageWrapper = document.getElementById('coolingImageWrapper');
 const overlayImageWrapper = document.getElementById('overlayImageWrapper');
 const overlayImage = document.getElementById('overlayImage');
+const brokenIcon = document.getElementById('brokenIcon');
 
 // FORM HANDLERS
 randomModeBtn.addEventListener('click', () => showView(menu));
@@ -318,8 +319,10 @@ function endSession(success) {
     <p>Outcome: ${outcome}</p>`;
   if (success) {
     nameEntry.classList.remove('hidden');
+    brokenIcon.classList.add('hidden');
   } else {
     nameEntry.classList.add('hidden');
+    brokenIcon.classList.remove('hidden');
   }
   showView(statsView);
 }

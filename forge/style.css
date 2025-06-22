@@ -22,8 +22,16 @@ button {
 }
 
 #menuImage {
+    display: block;
+    margin: 0 auto 20px auto;
     width: 300px;
     height: auto;
+}
+
+#brokenIcon {
+    width: 200px;
+    height: auto;
+    margin-top: 10px;
 }
 
 .list-icon {
